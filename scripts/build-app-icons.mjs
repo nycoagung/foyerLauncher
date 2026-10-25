@@ -1,5 +1,7 @@
-// Draws FoyerLauncher's app icons in the Windows-HQ colours shared with FlickrSyncr: a blue (#007EEE) open
-// doorway on a white tile, and for the Android TV banner that tile on deep navy with the name.
+// Draws FoyerLauncher's app icons, Material style (flat geometric shapes on Material's 192 grid, one corner
+// radius family), in the Windows-HQ colours shared with FlickrSyncr: a TV whose thick left and top bezels
+// and a bar into the screen form a blue (#007EEE) letter F, the rest of the TV in light blue, on a white
+// tile. The Android TV banner puts that tile on deep navy with the name.
 //   npm run build:icons
 // Writes app/icon.png (Samsung, 256 px), android/res/mipmap-*/ic_launcher.png and
 // android/res/drawable-xhdpi/banner.png (the tile in the TV's apps row, 320 x 180).
@@ -8,9 +10,14 @@ import { chromium } from 'playwright';
 import { root } from './browser.mjs';
 
 const BLUE = '#007EEE', NAVY = '#162143', NAVY_LIGHT = '#202F5B', MIST = '#AEC6FF', WHITE = '#FCFDFD';
-// An open doorway on a 192 grid: the frame, and the door swung open on its left hinge with a knob.
-const MARK = `<path d="M50 156V36h92v120" fill="none" stroke="${BLUE}" stroke-width="22" stroke-linejoin="miter"/>
-  <path d="M61 47l46 11v86l-46 12z" fill="${BLUE}"/><circle cx="96" cy="102" r="5" fill="${WHITE}"/>`;
+// On a 192 grid, one stroke weight (24): the TV body (light blue); the F (blue) as its top bezel, its left bezel
+// running on below the TV, and an arm into the screen that stops short of the edge so it can't read as a P;
+// the screen (white); and the stand, apart from the stem so the F doesn't become an E.
+const MARK = `<rect x="24" y="36" width="144" height="106" rx="20" fill="${MIST}"/>
+  <path d="M44 36H148a20 20 0 0 1 20 20v4H48v104H36a12 12 0 0 1-12-12V56a20 20 0 0 1 20-20z" fill="${BLUE}"/>
+  <rect x="48" y="60" width="106" height="68" rx="6" fill="${WHITE}"/>
+  <rect x="40" y="86" width="76" height="24" rx="12" fill="${BLUE}"/>
+  <rect x="78" y="152" width="52" height="12" rx="6" fill="${MIST}"/>`;
 const tile = (size, radius) => `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 192 192">
   <rect width="192" height="192" rx="${radius}" fill="${WHITE}"/>${MARK}</svg>`;
 const font = readFileSync(root + 'app/assets/manrope.woff2').toString('base64');

@@ -33,7 +33,7 @@ First release as FoyerLauncher. Forked from CleanFrame 0.6.1 (MIT), a home scree
 - Renamed CleanFrame to FoyerLauncher throughout: globals (`FoyerDevice`, `FoyerQA`, `FoyerIconMetrics`, `FoyerWallpapers`, `FoyerAdaptiveInk`, `FoyerPrivateFontIDs`), the `foyer.home.v1` storage key, `FOYER_PUBLIC_FONTS`, and export names (`dist/FoyerLauncher-public-unsigned.wgt`).
 - New Tizen identity: package `FoyerHome1`, application `FoyerHome1.FoyerLauncher`, widget id `https://foyerlauncher.local/app`. A TV with CleanFrame installed treats FoyerLauncher as a separate app.
 - `assets/icons/metrics.js` now loads before the device adapters, so a local marks file can extend it.
-- New app icon and Android TV banner in the Windows-HQ colours shared with FlickrSyncr: a blue (#007EEE) open doorway on a white tile, on deep navy for the banner. `npm run build:icons` (`scripts/build-app-icons.mjs`) draws them, including the Samsung `app/icon.png`.
+- New app icon and Android TV banner in the Windows-HQ colours shared with FlickrSyncr: Material-style flat shapes on a white tile: a TV whose bezels form a blue (#007EEE) letter F, the rest of the TV in light blue, on deep navy for the banner. `npm run build:icons` (`scripts/build-app-icons.mjs`) draws them, including the Samsung `app/icon.png`.
 - The bundled photo source is named FoyerLauncher (stored as `builtin`).
 - Licence: GPL-2.0-or-later. CleanFrame's MIT notice is kept in `THIRD_PARTY_NOTICES.md` for the parts that came from it.
 

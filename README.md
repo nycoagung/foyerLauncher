@@ -60,6 +60,7 @@ On **Samsung Tizen TVs** it runs as a signed Tizen web app, as it did in [CleanF
 ## Requirements
 
 - **An AI coding agent** that can run commands on your computer, such as Claude Code, to do the installation with you.
+- **On the TV: Developer options and debugging turned on.** Installing, debloating and restoring all work over ADB (Android Debug Bridge), so the TV must have **Developer options** unlocked and **USB debugging** (also called ADB or Network debugging) or **Wireless debugging** turned on. Your agent walks you through it during setup. The TV and the computer must be on the same network.
 - **Android TV / Google TV:** Android TV OS 8.0 (API 26) or later, any brand. Developed on Google TV running Android TV OS 12.
 - **Amazon Fire TV:** debloat only; Fire OS doesn't let another app take the Home button.
 - **Samsung:** a Tizen TV with developer mode. Developed on Tizen 9.0; the package declares 6.5.
@@ -85,12 +86,14 @@ On **Samsung Tizen TVs** it runs as a signed Tizen web app, as it did in [CleanF
 Installing on a TV **needs an AI coding agent** that can run commands on your computer, such as [Claude Code](https://claude.com/claude-code). The agent reads this repository and follows [docs/agent-android-setup-guide.md](docs/agent-android-setup-guide.md) (Android TV, Google TV and Fire TV of any brand) or [docs/agent-tv-setup-guide.md](docs/agent-tv-setup-guide.md) (Samsung) with you:
 
 1. It asks for your TV's **brand, model, platform, software version and IP address**, and shows you where to find each one. You can type them or send a photo of the settings screen.
-2. It helps you turn on debugging on the TV and connects to it, checking it's the TV you described.
+2. It walks you through **turning on Developer options and debugging on the TV**: in Settings → System → About, select *Android TV OS build* seven times to unlock Developer options, then turn on *USB debugging* (or *Wireless debugging*) there. Menu names vary by brand; on Fire TV it's Settings → My Fire TV → Developer options → *ADB debugging*. When it connects, the TV asks *Allow USB debugging?*: choose *Always allow from this computer*. The agent then checks it's the TV you described.
 3. It shows you **the apps you could hide**, grouped, with what each one does, recommends which to hide and tells you what you'd lose with the rest. You choose, see exactly what will happen, and approve it.
 4. It hides your choices, installs FoyerLauncher, and checks with you that the remote, inputs, picture, Wi-Fi and the Home button all work.
 5. It hands you **your TV's restore script**, `my-tvs/<model>-<serial>/restore-my-tv.sh`, and shows you what it would undo.
 
 Your TV's details stay on your computer, in the `my-tvs/` folder, which is never part of the project's files. The agent asks before each step that changes the TV.
+
+Debugging lets computers you've approved control the TV over your network. You can turn it off again in Developer options once setup is done; turn it back on before running your restore script or updating FoyerLauncher.
 
 ### 1. Get the code
 
@@ -114,7 +117,7 @@ project files, and finish by showing me my TV's restore script.
 
 ### 3. To undo it later
 
-Run your TV's restore script (with debugging still on, and `TV_IP=<TV_IP>` in front if the TV's address has changed):
+Run your TV's restore script (with debugging turned on, and `TV_IP=<TV_IP>` in front if the TV's address has changed):
 
 ```bash
 my-tvs/<model>-<serial>/restore-my-tv.sh               # bring back every hidden app and give Home back

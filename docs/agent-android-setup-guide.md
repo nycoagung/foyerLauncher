@@ -130,8 +130,9 @@ The scripts have written `my-tvs/<model>-<serial>/restore-my-tv.sh`, made for th
 Run it once with `--dry-run` so the owner sees what it would do, then tell them:
 
 - where it is, and to keep the `my-tvs/` folder (or a copy of it): it's what makes the restore exact;
-- how to run it: `my-tvs/<model>-<serial>/restore-my-tv.sh`, adding `TV_IP=<new address>` in front if the TV's address has changed, and with debugging still on;
-- that after a firmware update re-shows hidden apps, `TV_IP=<TV_IP> debloat/debloat.sh --again` repeats their choices.
+- how to run it: `my-tvs/<model>-<serial>/restore-my-tv.sh`, adding `TV_IP=<new address>` in front if the TV's address has changed, with debugging turned on;
+- that after a firmware update re-shows hidden apps, `TV_IP=<TV_IP> debloat/debloat.sh --again` repeats their choices;
+- that debugging lets approved computers control the TV over the network, so they may turn it off in Developer options now, and must turn it back on (and accept the prompt again) before running the restore script, `--again` or an update.
 
 **Agent prompt**
 

@@ -1,4 +1,4 @@
-# FoyerLauncher v1.0.0
+# FoyerLauncher v1.0.1
 
 A calm, uncluttered home screen for smart TVs of many brands, and a way to clear out the bloat they come with: your apps, a photograph and the time, made for the TV remote. An AI agent sets it up with you.
 
@@ -70,6 +70,13 @@ On **Samsung Tizen TVs** it runs as a signed Tizen web app, as it did in [CleanF
 - **Tizen builds:** the Tizen SDK command-line tools and your own Samsung certificates. See [docs/agent-tv-setup-guide.md](docs/agent-tv-setup-guide.md).
 
 ---
+
+## What's New in 1.0.1
+
+- **Security fixes from a full review.** The setup scripts now treat everything a TV reports as plain text, so a tampered TV, or a device posing as yours on the network, can't slip a command into your TV's restore script.
+- **The home screen runs only its own code** (a content-security policy), and Google ambient photos that are oversized or oddly shaped are skipped so they can't use up the TV's memory.
+- **[SECURITY.md](SECURITY.md)** gives a private way to report a security problem.
+- Nothing changed in how FoyerLauncher looks or works, or in how setup and restore are done.
 
 ## What's New in 1.0.0
 

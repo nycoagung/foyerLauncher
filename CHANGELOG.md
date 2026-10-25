@@ -4,7 +4,7 @@ All notable changes to this app will be documented in this file.
 
 ---
 
-## [Unreleased]
+## [1.0.1] - 2026-10-25
 
 ### Security
 Hardening from a security review; no change to how the app or scripts are used.

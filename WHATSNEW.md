@@ -2,6 +2,14 @@
 
 ---
 
+## Version 1.0.1
+
+- **Security fixes.** The setup scripts now treat everything your TV reports as plain text, so a tampered TV, or a device pretending to be yours, can't slip a command into your restore script.
+- **A safer home screen.** It now runs only its own code, and Google ambient photos that are oversized or oddly shaped are skipped so they can't use up your TV's memory.
+- Nothing changed in how FoyerLauncher looks or works.
+
+---
+
 ## Version 1.0.0
 
 - **Meet FoyerLauncher.** A calm home screen for your TV: the apps you choose over a beautiful photograph, with the time. No ads, no recommendations, no clutter.

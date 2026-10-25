@@ -1,6 +1,6 @@
 {
   "name": "foyerlauncher",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "A calm, uncluttered home screen for Android TV, Google TV and Samsung Tizen TVs.",
   "scripts": {

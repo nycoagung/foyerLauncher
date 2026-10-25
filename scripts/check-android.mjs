@@ -1,5 +1,5 @@
 // Android TV adapter checks. Mock only the shell's window.FoyerAndroid bridge; never contact a TV.
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { openPreview, root } from './browser.mjs';
 
 const KEY = 'foyer.home.v1';
@@ -27,6 +27,7 @@ const AMBIENT = { ok: true, value: [{ id: G[0], name: 'Ansel A', tone: 'light', 
 const AMBIENT_FILES = { [G[0]]: 'cove', [G[1]]: 'forest', [G[2]]: 'valley' };
 const INPUTS = [{ id: 'pkg/.Service/HW2', name: 'HDMI 1' }, { id: 'pkg/.Service/HW3', name: UNSAFE }];
 const out = root + '.local/qa/';
+const version = JSON.parse(readFileSync(root + 'package.json', 'utf8')).version;
 mkdirSync(out, { recursive: true });
 const report = { scope: 'Production UI in Chromium; mock Android bridge only; no TV contacted.', checks: [], failures: [], pageErrors: [] };
 let preview, current, section = '';
@@ -265,7 +266,7 @@ try {
     check('About is the last Settings group and every group fits above the hint', fit.count === 8 && fit.last === 'about' && fit.clear, fit);
     await act('settings.group.about');
     check('About lists the version, privacy policy and links', JSON.stringify(await call('actions')) === JSON.stringify(['settings.back', 'about.whatsnew', 'about.privacy', 'about.coffee', 'about.website', 'about.source']), await call('actions'));
-    check('The version comes from package.json', /Version 1\.0\.0/.test(await text()));
+    check('The version comes from package.json', (await text()).includes('Version ' + version));
     check('No diagnostics', !/diagnostic/i.test(await text()));
     await nav('ok');
     check('OK on the version opens What’s New', (await state()).view === 'reader' && /What’s New/.test(await text()) && /Meet FoyerLauncher/.test(await text()));

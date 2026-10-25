@@ -1,0 +1,18 @@
+# How debloat.sh and restore.sh recognise a TV's brand. The TV's ro.product.brand is tried first, then
+# ro.product.manufacturer, ro.product.model and ro.product.device; within each, the first pattern that
+# matches wins. Patterns are extended regular expressions, matched case-insensitively.
+# A TV that matches nothing gets only common.txt, and the scripts say so. --brand <id> overrides this.
+#
+# id         pattern                                                  name
+sony         sony|bravia                                              Sony
+philips      philips|tp.?vision|^tpv$                                  Philips
+sharp        sharp|aquos                                              Sharp
+panasonic    panasonic                                                Panasonic
+toshiba      toshiba                                                  Toshiba
+hisense      hisense|vidaa                                            Hisense
+tcl          tcl                                                      TCL
+xiaomi       xiaomi|redmi|^mitv|mibox|^mi.box                         Xiaomi
+nvidia       nvidia|shield                                            Nvidia Shield
+onn          ^onn                                                     Walmart onn.
+google       chromecast|google.tv.streamer|^sabrina$|^boreal$|^kirkwood$   Chromecast / Google TV Streamer
+amazon       amazon|^aft                                              Amazon Fire TV

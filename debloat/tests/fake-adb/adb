@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# A stand-in for adb, for debloat/tests/run.sh. The "TV" is the folder $FAKE_TV:
+#   props     key=value lines (ro.product.brand=TCL ...)
+#   packages  "<package> <state>" lines; state 0 default, 1 enabled, 2 maker-disabled, 3 user-disabled
+#   settings  key=value lines for `settings ... secure` (missing means null)
+set -e
+[ "$1" = -s ] && shift 2
+P=$FAKE_TV/packages S=$FAKE_TV/settings
+touch "$S"
+set_state() { awk -v p="$1" -v s="$2" '$1 == p { $2 = s } { print }' "$P" > "$P.new" && mv "$P.new" "$P"; }
+has() { awk -v p="$1" '$1 == p { f = 1 } END { exit !f }' "$P"; }
+setting() { awk -F= -v k="$1" '$1 == k { print substr($0, index($0, "=") + 1); f = 1 } END { if (!f) print "null" }' "$S"; }
+put_setting() { { grep -v "^$1=" "$S" || true; [ -z "${2+x}" ] || echo "$1=$2"; } > "$S.new"; mv "$S.new" "$S"; }
+case "$1" in
+  connect) echo "connected"; exit 0 ;;
+  get-state) echo device; exit 0 ;;
+  install) has io.github.nycoagung.foyerlauncher || echo "io.github.nycoagung.foyerlauncher 0" >> "$P"; echo Success; exit 0 ;;
+  uninstall) awk -v p="$2" '$1 != p' "$P" > "$P.new"; mv "$P.new" "$P"; echo Success; exit 0 ;;
+  shell) shift ;;
+  *) echo "fake adb: unsupported $*" >&2; exit 1 ;;
+esac
+case "$1 $2" in
+  "getprop "*) awk -F= -v k="$2" '$1 == k { print substr($0, index($0, "=") + 1) }' "$FAKE_TV/props" ;;
+  "pm list")
+    if [ "${4:-}" = -d ]; then awk '$2 == 2 || $2 == 3 { print "package:" $1 }' "$P"
+    else awk '{ print "package:" $1 }' "$P"; fi ;;
+  "dumpsys package") awk -v p="$3" '$1 == p { print "    versionName=1.0.0"; print "    User 0: ceDataInode=1 installed=true hidden=false stopped=false enabled=" $2 " instant=false" }' "$P" ;;
+  "dumpsys accessibility") echo "Bound services:{$(setting enabled_accessibility_services)}" ;;
+  "pm disable-user") pkg=$5; has "$pkg" || { echo "Unknown package: $pkg"; exit 0; }; set_state "$pkg" 3; echo "Package $pkg new state: disabled-user" ;;
+  "pm enable") pkg=$5; set_state "$pkg" 1; echo "Package $pkg new state: enabled" ;;
+  "pm default-state") pkg=$5; set_state "$pkg" 0; echo "Package $pkg new state: default" ;;
+  "settings get") setting "$4" ;;
+  "settings put") v=$5; v=${v#\'}; v=${v%\'}; put_setting "$4" "$v" ;;
+  "settings delete") put_setting "$4" ;;
+  "cmd package") echo "com.example.tvhome/.HomeActivity" ;;
+  *) echo "fake adb: unsupported shell $*" >&2; exit 1 ;;
+esac

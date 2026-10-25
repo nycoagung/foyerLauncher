@@ -1,0 +1,65 @@
+# Packages hidden on one Sony Google TV (Android 12) and tested in daily use; input to
+# build-lists.py, which writes ../brands/sony.txt. The scripts use ../brands/, not this file.
+# Format: <group> <package> <description>
+
+# streaming: preinstalled streaming apps you don't use
+streaming    com.netflix.ninja                       Netflix
+streaming    com.netflix.partner.ncm                 Netflix remote-button helper
+streaming    com.amazon.amazonvideo.livingroom       Prime Video
+streaming    com.apple.atve.sony.appletv             Apple TV
+streaming    com.google.android.youtube.tvmusic      YouTube Music
+streaming    com.google.android.play.games           Google Play Games
+
+# ads: Sony promotions and viewing tracking
+ads          com.sony.dtv.promos                     Sony promotions tile and promo content
+ads          com.sony.dtv.sonyselect                 Sony Select app recommendations
+ads          com.sony.dtv.sonytab                    Sony partner content rows on the home screen
+ads          tv.samba.ssm                            Samba TV, recognises what is on screen for ad targeting
+ads          tv.samba.ssm.ui                         Samba TV opt-in and settings screens
+
+# demo: retail demo, help and feedback
+demo         com.sony.dtv.multiscreendemo            Store demo
+demo         com.sony.dtv.demosupport                Store demo mode
+demo         com.sony.dtv.smarthelp                  Help app tile
+demo         com.sony.dtv.helpguidecontents          On-TV help guide
+demo         com.google.android.feedback             Google feedback reporter
+demo         com.android.printspooler                Printing service
+
+# telemetry: Sony usage logging and remote support
+telemetry    com.sonyericsson.idd.agent              Sony usage-data agent (IDD)
+telemetry    com.sony.dtv.da.service                 Sony remote support and diagnostics
+telemetry    com.qterics.da.product                  Qterics remote diagnostics agent
+
+# camera: BRAVIA CAM features (only useful with the camera attached)
+camera       com.sony.dtv.livingfit                  Living Fit camera workouts
+camera       com.sony.dtv.gestureapp                 Camera gesture control
+camera       com.sony.dtv.distancealert              Camera viewing-distance alert
+camera       com.sony.dtv.sensingcamera.fwupdate     BRAVIA CAM firmware updater
+camera       com.sony.dtv.sensingcamera.settings     BRAVIA CAM settings
+
+# apple: AirPlay and HomeKit
+apple        com.sony.dtv.airplayapp                 AirPlay receiver
+apple        com.sony.dtv.homekit                    Apple HomeKit integration
+
+# speaker: control the TV from Alexa or Google Home speakers
+speaker      com.sony.dtv.seeds.iot                  Smart speaker setup tile
+speaker      com.sony.dtv.seeds.iot.remotestart      Turn the TV on from a smart speaker
+
+# media: Sony's own media players and DLNA
+media        com.sony.dtv.smartmediaapp              Sony Media Player for USB photos and videos
+media        com.sony.dtv.osat.music                 Sony Music player
+media        com.sony.huey.dlna.module               DLNA media renderer
+media        com.sony.huey.dlna.renderersettings     DLNA renderer settings
+media        com.sonyericsson.dlna                   DLNA service
+
+# cast: Chromecast built-in (casting from phone apps, including YouTube)
+cast         com.google.android.apps.mediashell      Chromecast built-in
+
+# googletv: Google TV app (Shop tab, purchases, Library)
+googletv     com.google.android.videos               Google TV app
+
+# ambient: Google TV ambient-mode screensaver
+ambient      com.google.android.apps.tv.dreamx       Ambient mode screensaver
+
+# browser: Vewd web browser tile
+browser      com.vewd.core.integration.dia           Vewd internet browser tile

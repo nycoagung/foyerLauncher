@@ -1,0 +1,43 @@
+# Machine-specific tools, signing keys and device configuration
+/.local/
+/dist/
+/node_modules/
+.DS_Store
+__pycache__/
+*.pyc
+.env
+.env.*
+*.p12
+*.pem
+*.key
+*.csr
+profiles.xml
+session.json
+certificate-password.txt
+
+# Proprietary fonts are injected from .local/ at preview/package time.
+/app/assets/private-fonts/
+PP*.ttf
+PP*.otf
+PP*.woff
+PP*.woff2
+*.wgt
+*.apk
+*.jks
+*.keystore
+
+# Personal studies, research and draft writing stay local.
+/explorations/
+/docs/research/
+/docs/articles/
+
+# Marks made from your own TV's apps by scripts/marks-from-tv.mjs: that TV only, never published.
+/app/assets/icons/local/
+
+# Each TV's records and its own restore script (debloat/ and android/ write them): that TV's owner only.
+/my-tvs/
+/debloat/tests/.work/
+
+# Android shell: build output, the signing key and per-TV settings baselines.
+/android/out/
+/android/.local/

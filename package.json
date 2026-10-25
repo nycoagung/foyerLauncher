@@ -1,0 +1,28 @@
+{
+  "name": "foyerlauncher",
+  "version": "1.0.0",
+  "private": true,
+  "description": "A calm, uncluttered home screen for Android TV, Google TV and Samsung Tizen TVs.",
+  "scripts": {
+    "dev": "python3 scripts/preview.py",
+    "check": "node --check app/main.js && node --check app/device.js && node --check app/device-android.js && python3 scripts/check.py",
+    "package": "python3 scripts/package.py",
+    "tv:info": "python3 scripts/tv.py info",
+    "tv:install": "python3 scripts/tv.py install",
+    "tv:launch": "python3 scripts/tv.py launch",
+    "check:browser": "node scripts/check-browser.mjs",
+    "check:android": "node scripts/check-android.mjs",
+    "check:debloat": "bash debloat/tests/run.sh",
+    "build:android": "sh android/build.sh",
+    "build:about": "python3 scripts/build_about.py",
+    "build:lists": "python3 debloat/research/build-lists.py",
+    "build:icons": "node scripts/build-app-icons.mjs",
+    "dev:public": "python3 scripts/preview.py --public-fonts",
+    "export:public": "python3 scripts/export-public.py",
+    "check:public": "python3 scripts/check-public.py"
+  },
+  "devDependencies": {
+    "playwright": "1.64.1"
+  },
+  "license": "GPL-2.0-or-later"
+}

@@ -66,12 +66,41 @@ if [ "$(adb -s "$TV" get-state 2>/dev/null)" != device ]; then
   exit 1
 fi
 tv() { adb -s "$TV" shell "$@" </dev/null | tr -d '\r'; }
-if [ -n "$SERIAL" ] && [ "$(tv getprop ro.serialno)" != "$SERIAL" ]; then
-  echo "The TV at $TV is not the one this script was written for (serial $SERIAL). Nothing was changed."
+# The same identity setup recorded: the serial number, or the Android ID when the serial is missing or a placeholder.
+identity() {
+  local serial; serial=$(tv getprop ro.serialno)
+  case "$(printf '%s' "$serial" | tr 'a-z' 'A-Z')" in
+    ''|UNKNOWN|0123456789ABCDEF|1234567890ABCDEF|0000000000000000|0123456789) printf 'aid-%s' "$(tv settings get secure android_id)" ;;
+    *) printf '%s' "$serial" ;;
+  esac
+}
+if [ -n "$SERIAL" ] && [ "$(identity)" != "$SERIAL" ]; then
+  echo "The TV at $TV is not the one this script was written for ($SERIAL). Nothing was changed."
   exit 1
 fi
-run() { if [ $dry_run = 1 ]; then echo "  would run: $*"; else tv "$@" >/dev/null; fi; }
+failed=0
+fail() { echo "  !! $*"; failed=$((failed + 1)); }
+run() { if [ $dry_run = 1 ]; then echo "  would run: $*"; else tv "$@" >/dev/null 2>&1; fi; }
 state() { tv dumpsys package "$1" | awk '/User 0:.* enabled=[0-9]/ && !d { match($0, / enabled=[0-9]/); print substr($0, RSTART + 9, 1); d = 1 }'; }
+
+# The Home button first, so it comes back even if an app can't be restored.
+if [ -n "$LAUNCHER" ]; then
+  current=$(tv settings get secure enabled_accessibility_services)
+  if printf '%s' "$current" | tr ':' '\n' | grep -q "^$LAUNCHER/"; then
+    echo "Giving the Home button back to the TV's own home screen."
+    others=$(printf '%s' "$current" | tr ':' '\n' | grep -v "^$LAUNCHER/" | grep -v '^null$' | paste -sd: - || true)
+    if [ -n "$others" ]; then
+      run settings put secure enabled_accessibility_services "'$others'" || fail "couldn't turn off the Home button service"
+    else
+      # Exactly as before only if no other service was on then either; one turned off since stays off.
+      before=$(printf '%s' "$SERVICES_BEFORE" | tr ':' '\n' | grep -v "^$LAUNCHER/" | grep -v '^null$' | paste -sd: - || true)
+      run settings delete secure enabled_accessibility_services || fail "couldn't turn off the Home button service"
+      if [ -z "$before" ] && [ -n "$ENABLED_BEFORE" ] && [ "$ENABLED_BEFORE" != null ]; then run settings put secure accessibility_enabled "$ENABLED_BEFORE" || fail "couldn't restore accessibility"
+      elif [ -z "$before" ] && [ "$ENABLED_BEFORE" = null ]; then run settings delete secure accessibility_enabled || fail "couldn't restore accessibility"
+      else run settings put secure accessibility_enabled 0 || fail "couldn't restore accessibility"; fi
+    fi
+  fi
+fi
 
 restored=0
 if [ -n "$PACKAGES" ]; then
@@ -80,35 +109,27 @@ if [ -n "$PACKAGES" ]; then
     [ -n "$pkg" ] || continue
     # Only apps that are still hidden by a user; anything the maker ships disabled is left as it is.
     [ "$(state "$pkg")" = 3 ] || continue
-    if [ $dry_run = 1 ]; then echo "  would bring back $pkg"
-    elif [ "$before" = 1 ]; then run pm enable --user 0 "$pkg"; echo "  ok $pkg"
-    else run pm default-state --user 0 "$pkg"; echo "  ok $pkg"; fi
-    restored=$((restored + 1))
+    if [ $dry_run = 1 ]; then echo "  would bring back $pkg"; restored=$((restored + 1)); continue; fi
+    if [ "$before" = 1 ]; then result=$(tv pm enable --user 0 "$pkg" 2>&1) || true
+    else result=$(tv pm default-state --user 0 "$pkg" 2>&1) || true; fi
+    case "$result" in
+      *"new state"*) echo "  ok $pkg"; restored=$((restored + 1)) ;;
+      *) fail "$pkg: ${result:-no answer from the TV}" ;;
+    esac
   done <<< "$PACKAGES"
   if [ $dry_run = 1 ]; then echo "  $restored would be brought back."; else echo "  $restored brought back."; fi
 fi
 
-if [ -n "$LAUNCHER" ]; then
-  current=$(tv settings get secure enabled_accessibility_services)
-  others=$(printf '%s' "$current" | tr ':' '\n' | grep -v "^$LAUNCHER/" | grep -v '^null$' | paste -sd: - || true)
-  if printf '%s' "$current" | tr ':' '\n' | grep -q "^$LAUNCHER/"; then
-    echo "Giving the Home button back to the TV's own home screen."
-    if [ -n "$others" ]; then
-      run settings put secure enabled_accessibility_services "'$others'"
-    else
-      before=$(printf '%s' "$SERVICES_BEFORE" | tr ':' '\n' | grep -v "^$LAUNCHER/" | grep -v '^null$' | paste -sd: - || true)
-      run settings delete secure enabled_accessibility_services
-      if [ -z "$before" ] && [ -n "$ENABLED_BEFORE" ] && [ "$ENABLED_BEFORE" != null ]; then run settings put secure accessibility_enabled "$ENABLED_BEFORE"
-      else run settings put secure accessibility_enabled 0; fi
-    fi
-  fi
-  if [ $uninstall = 1 ]; then
-    echo "Removing FoyerLauncher."
-    if [ $dry_run = 1 ]; then echo "  would run: adb uninstall $LAUNCHER"; else adb -s "$TV" uninstall "$LAUNCHER" >/dev/null 2>&1 || echo "  FoyerLauncher was not installed."; fi
-  fi
+if [ -n "$LAUNCHER" ] && [ $uninstall = 1 ]; then
+  echo "Removing FoyerLauncher."
+  if [ $dry_run = 1 ]; then echo "  would run: adb uninstall $LAUNCHER"; else adb -s "$TV" uninstall "$LAUNCHER" >/dev/null 2>&1 || echo "  FoyerLauncher was not installed."; fi
 fi
 
 [ $dry_run = 1 ] && { echo "Dry run: nothing changed."; exit 0; }
+if [ $failed -gt 0 ]; then
+  echo "$failed step(s) didn't work, listed above with !!. Check the TV is on and connected, then run this script again: it only redoes what is still needed."
+  exit 1
+fi
 echo "Done. Home now opens: $(tv cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.HOME | tail -1)"
 echo "You can turn off Developer options on the TV again if you like (Settings > System > Developer options)."
 EOF

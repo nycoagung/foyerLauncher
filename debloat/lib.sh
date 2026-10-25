@@ -45,6 +45,8 @@ detect_brand() {
     return
   fi
   BRAND="" BRAND_NAME=""
+  # Fire OS first: Fire TV Edition sets carry the TV maker's brand, but Amazon's software (models AFT...).
+  case "$(tv getprop ro.product.model)" in AFT*) BRAND=amazon; BRAND_NAME=$(brand_name amazon); return ;; esac
   for prop in ro.product.brand ro.product.manufacturer ro.product.model ro.product.device; do
     value=$(tv getprop "$prop")
     [ -n "$value" ] || continue
@@ -55,30 +57,44 @@ detect_brand() {
 
 # build_list: writes LIST, one "verdict group package description" line per package, from common.txt and
 # the brand's list. Where both name a package, the more cautious verdict wins (bloat < optional < keep < never).
+# SOURCES says which list each line came from (0 common, 1 brand), for never-patterns.
 build_list() {
-  LIST=$(mktemp "${TMPDIR:-/tmp}/debloat.XXXXXX")
+  LIST=$(mktemp "${TMPDIR:-/tmp}/debloat.XXXXXX"); SOURCES="$LIST.src"
   local files=("$DEBLOAT/brands/common.txt")
   [ -n "$BRAND" ] && [ "$BRAND" != common ] && files+=("$DEBLOAT/brands/$BRAND.txt")
-  awk -v ranks="$RANKS" '
+  awk -v ranks="$RANKS" -v common="${files[0]}" -v sources="$SOURCES" '
     BEGIN { n = split(ranks, r, " "); for (i = 1; i <= n; i++) { split(r[i], kv, ":"); rank[kv[1]] = kv[2] } }
     /^#/ || NF < 3 || !($1 in rank) { next }
     {
       pkg = $3; line = $0
-      if (!(pkg in best) || rank[$1] >= rank[verdict[pkg]]) { best[pkg] = line; verdict[pkg] = $1 }
+      if (!(pkg in best) || rank[$1] >= rank[verdict[pkg]]) { best[pkg] = line; verdict[pkg] = $1; from[pkg] = FILENAME == common ? 0 : 1 }
       if (!(pkg in order)) { order[pkg] = ++count; names[count] = pkg }
     }
-    END { for (i = 1; i <= count; i++) print best[names[i]] }
+    END { for (i = 1; i <= count; i++) { print best[names[i]]; print names[i], from[names[i]] > sources } }
   ' "${files[@]}" > "$LIST"
-  trap 'rm -f "$LIST"' EXIT
+  trap 'rm -f "$LIST" "$SOURCES"' EXIT
 }
 
-# protected <package>: true when the merged list says keep or never for it, or when it has no entry of its
-# own and a never-pattern (com.x.*) covers it. A package's own entry is more specific than a pattern.
+# protected <package>: true when the merged list says keep or never for it, or a never-pattern covers it
+# (com.mediatek.* covers every package starting com.mediatek.). A package's own entry in the same or a
+# more specific list beats a pattern: a TCL entry beats a TCL pattern, but a TCL pattern beats common.txt.
 protected() {
-  awk -v p="$1" '
-    $3 == p { own = $1 }
-    $1 == "never" && $3 ~ /\*$/ { prefix = $3; sub(/\.?\*$/, "", prefix); if (index(p, prefix ".") == 1 || p == prefix) pattern = 1 }
-    END { exit !(own == "keep" || own == "never" || (own == "" && pattern)) }' "$LIST"
+  awk -v p="$1" -v sources="$SOURCES" '
+    BEGIN { while ((getline line < sources) > 0) { split(line, f, " "); src[f[1]] = f[2] } }
+    $3 == p { own = $1; ownsrc = src[p] }
+    $1 == "never" && $3 ~ /\*$/ { prefix = $3; sub(/\*$/, "", prefix); if (index(p, prefix) == 1 && (patsrc == "" || src[$3] > patsrc)) patsrc = src[$3] }
+    END { exit !(own == "keep" || own == "never" || (patsrc != "" && (own == "" || patsrc > ownsrc))) }' "$LIST"
+}
+
+# tv_identity: the TV's serial number, or, when it has none or a placeholder shared by many sets, its
+# Android ID. It keys my-tvs/ and lets the restore script refuse a different TV.
+tv_identity() {
+  local serial
+  serial=$(tv getprop ro.serialno)
+  case "$(printf '%s' "$serial" | tr 'a-z' 'A-Z')" in
+    ''|UNKNOWN|0123456789ABCDEF|1234567890ABCDEF|0000000000000000|0123456789) printf 'aid-%s' "$(tv settings get secure android_id)" ;;
+    *) printf '%s' "$serial" ;;
+  esac
 }
 
 # tv_dir: sets DIR, this TV's folder in my-tvs/ (ignored by Git), keyed by model and serial number, and
@@ -87,7 +103,7 @@ tv_dir() {
   local manufacturer model serial key first
   manufacturer=$(tv getprop ro.product.manufacturer)
   model=$(tv getprop ro.product.model)
-  serial=$(tv getprop ro.serialno)
+  serial=$(tv_identity)
   key="$(printf '%s' "${model:-tv}" | tr -c 'A-Za-z0-9._-' _ | sed 's/_*$//')${serial:+-$(printf '%s' "$serial" | tr -c 'A-Za-z0-9._-' _)}"
   DIR="$REPO/my-tvs/$key"
   mkdir -p "$DIR"; chmod 700 "$REPO/my-tvs" "$DIR" 2>/dev/null || true

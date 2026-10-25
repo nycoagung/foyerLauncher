@@ -42,7 +42,7 @@ Check for, and with the owner's agreement install:
 
 - **adb** (Android platform-tools). On macOS: `brew install --cask android-platform-tools`.
 - **Node.js 22+ and Python 3.10+**, then `npm ci` in the repository.
-- **To build FoyerLauncher:** Android SDK platform 34 and build-tools 35.0.0, and a JDK 17+. Android Studio's bundled SDK and JDK are found automatically on macOS; elsewhere set `ANDROID_HOME` and `JAVA_HOME`.
+- **To build FoyerLauncher:** Android SDK platform 34 and build-tools 35.0.0, a JDK 17+, and `unzip` (for the app logos). Android Studio's bundled SDK and JDK are found automatically on macOS; elsewhere set `ANDROID_HOME` and `JAVA_HOME`.
 
 Build with `npm run build:android` (stage 7 rebuilds it with the TV's app marks). The first build makes a signing key in ignored `android/.local/`. Tell the owner to keep that folder: updates must be signed with the same key.
 
@@ -88,7 +88,7 @@ Explain that nothing is deleted and everything can be brought back, then ask:
 1. Hide all the recommended apps? If they want to keep any, note them for `--except`.
 2. Which optional groups, or single apps, should go too? Point out anything they might rely on, such as YouTube, a streaming app they pay for, voice search or casting.
 
-Build one command from the answers, for example `TV_IP=<TV_IP> debloat/debloat.sh --include media,camera --except com.example.app`, and run it with `--dry-run` first. Show the owner the resulting list and get their go-ahead.
+Build one command from the answers, for example `TV_IP=<TV_IP> debloat/debloat.sh --include media,camera --except com.example.app`, and run it with `--dry-run` first. Single optional apps go in a second command (`debloat/debloat.sh com.example.app`): names can't be mixed with `--include` or `--except`. Show the owner the resulting list and get their go-ahead.
 
 **Agent prompt**
 
@@ -145,7 +145,7 @@ Run it once with `--dry-run` so the owner sees what it would do, then tell them:
 
 - where it is, and to keep the `my-tvs/` folder (or a copy of it): it's what makes the restore exact;
 - how to run it: `my-tvs/<model>-<serial>/restore-my-tv.sh`, adding `TV_IP=<new address>` in front if the TV's address has changed, with debugging turned on;
-- that after a firmware update re-shows hidden apps, `TV_IP=<TV_IP> debloat/debloat.sh --again` repeats their choices;
+- that after a firmware update re-shows hidden apps, `TV_IP=<TV_IP> debloat/debloat.sh --again` hides again everything that was hidden on this TV;
 - that debugging lets approved computers control the TV over the network, so they may turn it off in Developer options now, and must turn it back on (and accept the prompt again) before running the restore script, `--again` or an update.
 
 **Agent prompt**

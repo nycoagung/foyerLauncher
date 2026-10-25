@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Bring back apps hidden by debloat.sh, each to the enabled state recorded before it was first hidden.
-# Only apps in this TV's lists or its record are touched, and only ones hidden by a user: apps the maker
-# ships disabled stay as they are. To undo everything at once (apps and the Home button), the simplest is
-# the TV's own my-tvs/<model>-<serial>/restore-my-tv.sh, which debloat.sh keeps up to date.
+# Only apps in this TV's record are touched: apps the owner or the maker had disabled before stay as they
+# are. To undo everything at once (apps and the Home button), the simplest is the TV's own
+# my-tvs/<model>-<serial>/restore-my-tv.sh, which debloat.sh keeps up to date.
 #
 # Usage (TV_IP=<TV_IP> before each, or TV_SERIAL=<adb serial>):
-#   debloat/restore.sh                  restore every hidden app debloat.sh can hide
+#   debloat/restore.sh                  restore every app debloat.sh hid on this TV
 #   debloat/restore.sh camera media     restore only these groups
 #   debloat/restore.sh com.example.app  restore one app
 #   debloat/restore.sh --dry-run [...]  show what would be restored without changing the TV
@@ -34,17 +34,18 @@ build_list
 tv_dir
 BEFORE=$DIR/enabled-before.txt
 
-# Everything restorable: the lists' apps, plus anything this TV's record says debloat.sh hid
-# (in case a list has changed since).
+# Restorable: what this TV's record says debloat.sh hid, with the group and description from the lists.
 candidates=$(mktemp "${TMPDIR:-/tmp}/restore.XXXXXX")
-trap 'rm -f "$LIST" "$candidates"' EXIT
-awk '{ desc = $0; sub(/^[^ ]+ +[^ ]+ +[^ ]+ */, "", desc); print $3, $2, desc }' "$LIST" > "$candidates"
+trap 'rm -f "$LIST" "$SOURCES" "$candidates"' EXIT
 records() { cat "$BEFORE" 2>/dev/null || true; }
-records | awk '{ print $1, "recorded", "hidden by debloat.sh earlier" }' >> "$candidates"
+records | awk -v list="$LIST" '
+  BEGIN { while ((getline line < list) > 0) { split(line, f, " "); d = line; sub(/^[^ ]+ +[^ ]+ +[^ ]+ */, "", d); group[f[3]] = f[2]; desc[f[3]] = d } }
+  NF { print $1, ($1 in group ? group[$1] : "recorded"), ($1 in desc ? desc[$1] : "hidden by debloat.sh earlier") }' > "$candidates"
+[ -s "$candidates" ] || { echo "Nothing has been hidden on this TV by debloat.sh."; exit 0; }
 
 for n in "${names[@]}"; do
   awk -v s="$n" '$1 == s || $2 == s { found = 1 } END { exit !found }' "$candidates" \
-    || { echo "'$n' is not a group or app debloat.sh hides on this TV."; exit 1; }
+    || { echo "'$n' is not a group or app debloat.sh has hidden on this TV."; exit 1; }
 done
 
 chosen() {

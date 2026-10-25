@@ -14,7 +14,7 @@
 // and are never published. Then run build-icon-metrics.mjs, which writes local/marks.js, and
 // npm run build:android, which adds them to the build.
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { chromium } from 'playwright';
 import { root } from './browser.mjs';
@@ -39,11 +39,12 @@ if (REMOVE) {
   console.log('Now run: node scripts/build-icon-metrics.mjs');
   process.exit(0);
 }
-if (!AUTO && !MARKS.length) throw Error('Run with --auto to make marks for this TV\'s apps, or list them in .local/marks-from-tv.json.');
+const stop = message => { console.error(message); process.exit(1); };
+if (!AUTO && !MARKS.length) stop('Run with --auto to make marks for this TV\'s apps, or list them in .local/marks-from-tv.json.');
 const TV = process.env.TV_SERIAL || (process.env.TV_IP ? (process.env.TV_IP.includes(':') ? process.env.TV_IP : process.env.TV_IP + ':5555') : '');
-if (!TV) throw Error('Set TV_IP to the TV\'s address, or TV_SERIAL to an adb serial.');
+if (!TV) stop('Set TV_IP to the TV\'s address, or TV_SERIAL to an adb serial.');
 const AAPT2 = (process.env.ANDROID_HOME || homedir() + '/Library/Android/sdk') + '/build-tools/' + (process.env.BUILD_TOOLS || '35.0.0') + '/aapt2';
-if (!existsSync(AAPT2)) throw Error('aapt2 not found at ' + AAPT2 + '. Install Android build-tools 35.0.0 or set ANDROID_HOME.');
+if (!existsSync(AAPT2)) stop('aapt2 not found at ' + AAPT2 + '. Install Android build-tools 35.0.0 or set ANDROID_HOME.');
 const CAPS = ['butt', 'round', 'square'], JOINS = ['miter', 'round', 'bevel'];
 const run = (cmd, args, encoding = 'utf8') => execFileSync(cmd, args, { encoding, maxBuffer: 512 << 20 });
 const xml = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
@@ -107,7 +108,7 @@ function svgNode(n) {
     const px = +a.pivotX || 0, py = +a.pivotY || 0, t = [];
     if (a.translateX || a.translateY || px || py) t.push('translate(' + ((+a.translateX || 0) + px) + ' ' + ((+a.translateY || 0) + py) + ')');
     if (a.rotation) t.push('rotate(' + +a.rotation + ')');
-    if (a.scaleX || a.scaleY) t.push('scale(' + (a.scaleX || 1) + ' ' + (a.scaleY || 1) + ')');
+    if (a.scaleX || a.scaleY) t.push('scale(' + (+a.scaleX || 1) + ' ' + (+a.scaleY || 1) + ')');
     if (px || py) t.push('translate(' + -px + ' ' + -py + ')');
     return '<g' + (t.length ? ' transform="' + t.join(' ') + '"' : '') + '>' + n.kids.map(svgNode).join('') + '</g>';
   }
@@ -178,7 +179,8 @@ async function markFor(apks, res, title) {
   const l = layer(apks[0], res);
   if (l.tree) return { svg: vectorSvg(l.tree, title), l };
   browser = browser || await chromium.launch({ headless: true });
-  return { svg: await bitmapSvg(await browser.newPage(), unzipAny(apks, l.path), title), l };
+  const page = await browser.newPage();
+  try { return { svg: await bitmapSvg(page, unzipAny(apks, l.path), title), l }; } finally { await page.close(); }
 }
 // A mark is usable when its ink is a shape, not a square tile filling the canvas (an old bitmap icon).
 async function usable(svg) {
@@ -262,6 +264,8 @@ try {
         MARKS.push(m); made.push(m);
         console.log('  ok ' + title + ' (' + pkg + '): local/' + m.id + '.svg from its ' + (l.from || 'icon'));
       } catch (e) { skipped.push(pkg); console.log('  -  ' + pkg + ': ' + e.message.split('\n')[0]); }
+      // The packages can be large; only the marks are kept.
+      finally { for (const f of readdirSync(work)) if (f.startsWith(pkg + '.')) rmSync(work + f, { force: true }); }
     }
     save();
     if (MARKS.length) await preview(MARKS);
@@ -270,6 +274,7 @@ try {
   } else {
     for (const mark of MARKS) {
       const apks = pull(mark.pkg), { svg, l } = await markFor(apks, mark.res, mark.title);
+      for (const f of apks) rmSync(f, { force: true });
       writeFileSync(out + mark.id + '.svg', svg);
       console.log('local/' + mark.id + '.svg from ' + mark.pkg + ' ' + mark.res + ' (' + l.path + ', ' + l.type + ')');
     }

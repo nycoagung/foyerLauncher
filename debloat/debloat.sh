@@ -9,8 +9,8 @@
 #   debloat/debloat.sh                        hide the recommended apps ("bloat" in the brand's list)
 #   debloat/debloat.sh --include camera,media also hide these optional groups ("all" for every one)
 #   debloat/debloat.sh --except com.a,com.b   leave these recommended apps alone
-#   debloat/debloat.sh ads demo com.x.y       hide only these groups or apps
-#   debloat/debloat.sh --again                repeat the last choices for this TV (after a firmware update)
+#   debloat/debloat.sh ads demo com.x.y       hide only these groups or apps (not with --include or --except)
+#   debloat/debloat.sh --again                hide again everything hidden on this TV before (after a firmware update)
 #   debloat/debloat.sh --dry-run [...]        show what would be hidden without changing anything
 #   debloat/debloat.sh --brand tcl [...]      use a brand's list instead of detecting it (see debloat/brands/)
 # Apps marked keep or never in the lists are always refused.
@@ -18,7 +18,7 @@
 set -eo pipefail
 . "$(dirname "$0")/lib.sh"
 
-dry_run=0 list_only=0 again=0 include="" except="" names=() args=("$@")
+dry_run=0 list_only=0 again=0 include="" except="" names=()
 while [ $# -gt 0 ]; do
   case "$1" in
     --dry-run) dry_run=1 ;;
@@ -37,15 +37,18 @@ while [ $# -gt 0 ]; do
   shift
 done
 
+if [ ${#names[@]} -gt 0 ] && [ -n "$include$except" ]; then
+  echo "Name groups and apps on their own, or use the recommended set with --include and --except, not both."
+  exit 1
+fi
 resolve_tv
 connect
 detect_brand
 tv_dir
+BEFORE=$DIR/enabled-before.txt
 if [ $again = 1 ]; then
-  [ -f "$DIR/choices.txt" ] || { echo "No earlier choices recorded for this TV."; exit 1; }
-  echo "Repeating: debloat.sh $(cat "$DIR/choices.txt")"
-  # shellcheck disable=SC2046 # the recorded options, one per word
-  exec "$0" $(cat "$DIR/choices.txt") $([ $dry_run = 1 ] && echo --dry-run)
+  [ -s "$BEFORE" ] || { echo "Nothing has been hidden on this TV yet."; exit 1; }
+  echo "Hiding again everything hidden on this TV before ($(wc -l < "$BEFORE" | tr -d ' ') apps)."
 fi
 build_list
 about="$(tv getprop ro.product.manufacturer) $(tv getprop ro.product.model) (Android $(tv getprop ro.build.version.release))"
@@ -76,7 +79,7 @@ if [ $list_only = 1 ]; then
       if (!n) print "  (none on this TV)"
       for (i = 1; i <= n; i++) { print "  " groups[i] ":"; printf "%s", opt[groups[i]] }
     }' "$LIST"
-  hidden_count=$(awk -v d="$disabled" 'index(d, " " $3 " ")' "$LIST" | wc -l | tr -d ' ')
+  hidden_count=$(awk -v d="$disabled" '($1 == "bloat" || $1 == "optional") && index(d, " " $3 " ")' "$LIST" | wc -l | tr -d ' ')
   echo
   echo "Already hidden: $hidden_count. Apps marked keep or never are not shown and are never touched."
   exit 0
@@ -93,9 +96,12 @@ for g in $include; do
     || echo "Note: no optional group '$g' on this TV's list."
 done
 
+recorded() { [ -f "$BEFORE" ] && awk -v p="$1" '$1 == p { f = 1 } END { exit !f }' "$BEFORE"; }
+
 # chosen <verdict> <group> <package>
 chosen() {
   local n g
+  if [ $again = 1 ]; then recorded "$3"; return; fi
   for n in $except; do [ "$n" = "$3" ] && return 1; done
   if [ ${#names[@]} -gt 0 ]; then
     for n in "${names[@]}"; do [ "$n" = "$2" ] || [ "$n" = "$3" ] && return 0; done
@@ -106,12 +112,8 @@ chosen() {
   return 1
 }
 
-BEFORE=$DIR/enabled-before.txt
 stamp=$(date +%Y%m%d-%H%M%S)
-if [ $dry_run = 0 ]; then
-  tv pm list packages -d | sed 's/^package://' | sort > "$DIR/disabled-before-$stamp.txt"
-  printf '%s ' "${args[@]}" | sed 's/--dry-run//; s/  */ /g; s/ $//' > "$DIR/choices.txt"
-fi
+[ $dry_run = 1 ] || tv pm list packages -d | sed 's/^package://' | sort > "$DIR/disabled-before-$stamp.txt"
 
 echo "Hiding on $TV${names[*]:+: ${names[*]}}${include:+ (also:$include)}${except:+ (except:$except)}"
 hidden=0 skipped=0 failed=0
@@ -121,9 +123,12 @@ while read -r verdict group pkg desc; do
   is_installed "$pkg" || continue
   if protected "$pkg"; then echo "  =  $pkg is protected for this TV, skipped"; skipped=$((skipped + 1)); continue; fi
   if is_hidden "$pkg"; then echo "  =  $pkg already hidden"; skipped=$((skipped + 1)); continue; fi
+  before=$(user_state "$pkg")
+  # Disabled until used (4): the system wakes it when needed; hiding it would change that.
+  if [ "$before" = 4 ]; then echo "  =  $pkg is disabled until used, left as it is"; skipped=$((skipped + 1)); continue; fi
   if [ $dry_run = 1 ]; then echo "  ?  would hide $pkg ($desc)"; continue; fi
   # The first time only, keep the app's own enabled state so the restore puts back exactly that.
-  grep -q "^$pkg " "$BEFORE" 2>/dev/null || echo "$pkg $(user_state "$pkg")" >> "$BEFORE"
+  recorded "$pkg" || echo "$pkg $before" >> "$BEFORE"
   result=$(tv pm disable-user --user 0 "$pkg" 2>&1) || true
   if [[ "$result" == *disabled-user* ]]; then
     echo "  ok $pkg ($desc)"; hidden=$((hidden + 1))

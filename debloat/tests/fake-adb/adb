@@ -3,6 +3,7 @@
 #   props     key=value lines (ro.product.brand=TCL ...)
 #   packages  "<package> <state>" lines; state 0 default, 1 enabled, 2 maker-disabled, 3 user-disabled
 #   settings  key=value lines for `settings ... secure` (missing means null)
+# FAKE_FAIL_PKG makes pm enable/default-state fail for that package; FAKE_NO_A11Y=1 keeps services from binding.
 set -e
 [ "$1" = -s ] && shift 2
 P=$FAKE_TV/packages S=$FAKE_TV/settings
@@ -24,11 +25,11 @@ case "$1 $2" in
   "pm list")
     if [ "${4:-}" = -d ]; then awk '$2 == 2 || $2 == 3 { print "package:" $1 }' "$P"
     else awk '{ print "package:" $1 }' "$P"; fi ;;
-  "dumpsys package") awk -v p="$3" '$1 == p { print "    versionName=1.0.0"; print "    User 0: ceDataInode=1 installed=true hidden=false stopped=false enabled=" $2 " instant=false" }' "$P" ;;
-  "dumpsys accessibility") echo "Bound services:{$(setting enabled_accessibility_services)}" ;;
+  "dumpsys package") has "$3" || { echo "Unable to find package: $3"; exit 0; }; awk -v p="$3" '$1 == p { print "    versionName=1.0.0"; print "    User 0: ceDataInode=1 installed=true hidden=false stopped=false enabled=" $2 " instant=false" }' "$P" ;;
+  "dumpsys accessibility") [ -n "${FAKE_NO_A11Y:-}" ] && echo "Bound services:{}" || echo "Bound services:{$(setting enabled_accessibility_services)}" ;;
   "pm disable-user") pkg=$5; has "$pkg" || { echo "Unknown package: $pkg"; exit 0; }; set_state "$pkg" 3; echo "Package $pkg new state: disabled-user" ;;
-  "pm enable") pkg=$5; set_state "$pkg" 1; echo "Package $pkg new state: enabled" ;;
-  "pm default-state") pkg=$5; set_state "$pkg" 0; echo "Package $pkg new state: default" ;;
+  "pm enable") pkg=$5; [ "$pkg" = "${FAKE_FAIL_PKG:-}" ] && { echo "Error: failed"; exit 1; }; set_state "$pkg" 1; echo "Package $pkg new state: enabled" ;;
+  "pm default-state") pkg=$5; [ "$pkg" = "${FAKE_FAIL_PKG:-}" ] && { echo "Error: failed"; exit 1; }; set_state "$pkg" 0; echo "Package $pkg new state: default" ;;
   "settings get") setting "$4" ;;
   "settings put") v=$5; v=${v#\'}; v=${v%\'}; put_setting "$4" "$v" ;;
   "settings delete") put_setting "$4" ;;

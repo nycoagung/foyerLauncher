@@ -56,9 +56,12 @@ run debloat/debloat.sh com.google.android.tungsten.setupwraith
 check "a never app is refused by name" "[ \"\$(state com.google.android.tungsten.setupwraith)\" = 0 ] && says 'keep or never'"
 run debloat/debloat.sh com.example.unlisted
 check "an unlisted app is refused" "says 'not a group or app'"
-set_pkg com.sony.dtv.livingfit 0
+run debloat/debloat.sh --include camera com.sony.dtv.smarthelp
+check "names can't be mixed with --include" "says 'not both' && ! says 'Hiding on'"
+run debloat/debloat.sh com.sony.dtv.smarthelp
+set_pkg com.sony.dtv.livingfit 0; set_pkg com.sony.dtv.sonyselect 0; set_pkg com.sony.dtv.smarthelp 0
 run debloat/debloat.sh --again
-check "--again repeats the last choices" "says 'Repeating: debloat.sh --include camera' && [ \"\$(state com.sony.dtv.livingfit)\" = 3 ]"
+check "--again hides everything hidden before, across runs" "says 'Hiding again' && [ \"\$(state com.sony.dtv.livingfit)\" = 3 ] && [ \"\$(state com.sony.dtv.sonyselect)\" = 3 ] && [ \"\$(state com.sony.dtv.smarthelp)\" = 3 ]"
 
 # Then FoyerLauncher with the Home button, and the TV's own restore script undoing all of it.
 echo "enabled_accessibility_services=com.example.talkback/.Service" > "$FAKE_TV/settings"
@@ -79,11 +82,38 @@ sed -i.bak 's/^ro.serialno=.*/ro.serialno=OTHER/' "$FAKE_TV/props"
 run "$(mytv)restore-my-tv.sh"
 check "the restore script refuses a different TV" "says 'not the one this script was written for'"
 
+# Apps the owner had disabled before stay disabled; a failing app doesn't stop the restore.
+tv sony4 "$SONY" com.sony.dtv.sonyselect:0 tv.samba.ssm:0 com.sony.dtv.multiscreendemo:3
+run debloat/debloat.sh
+run android/install.sh
+run debloat/restore.sh
+check "restore.sh leaves apps disabled before setup alone" "[ \"\$(state com.sony.dtv.multiscreendemo)\" = 3 ] && [ \"\$(state com.sony.dtv.sonyselect)\" = 0 ]"
+run debloat/debloat.sh
+(cd "$WORK/repo" && FAKE_FAIL_PKG=com.sony.dtv.sonyselect "$(mytv)restore-my-tv.sh") > "$WORK/out" 2>&1; status=$?
+check "a failing app doesn't stop the restore script" "[ \$status = 1 ] && says '!! com.sony.dtv.sonyselect' && [ \"\$(state tv.samba.ssm)\" = 0 ] && [ \"\$(setting enabled_accessibility_services)\" = null ]"
+check "the restore script leaves apps disabled before setup alone" "[ \"\$(state com.sony.dtv.multiscreendemo)\" = 3 ]"
+run "$(mytv)restore-my-tv.sh"
+check "running it again finishes the job" "[ \"\$(state com.sony.dtv.sonyselect)\" = 0 ] && says 'Done'"
+
+# A Home service slow to start still leaves a restore script that gives Home back.
+tv sony5 "$SONY" com.sony.dtv.sonyselect:0
+(cd "$WORK/repo" && FAKE_NO_A11Y=1 android/install.sh) > "$WORK/out" 2>&1
+check "a slow Home service still gets a restore script" "says 'did not start yet' && grep -q \"LAUNCHER='io.github.nycoagung.foyerlauncher'\" \"\$(mytv)restore-my-tv.sh\""
+
+# A TV without a real serial number is told apart by its Android ID.
+tv noserial "ro.product.brand=Sony ro.product.manufacturer=Sony ro.product.model=BRAVIA+Test ro.serialno=0123456789ABCDEF" com.sony.dtv.sonyselect:0
+echo "android_id=abc123" > "$FAKE_TV/settings"
+run debloat/debloat.sh
+check "a placeholder serial falls back to the Android ID" "[ \"\$(basename \"\$(mytv)\")\" = BRAVIA_Test-aid-abc123 ]"
+echo "android_id=other" > "$FAKE_TV/settings"
+run "$(mytv)restore-my-tv.sh"
+check "and the restore script tells such TVs apart" "says 'not the one this script was written for'"
+
 # A TV whose accessibility was off: the restore puts it back off.
 tv sony2 "$SONY" com.sony.dtv.sonyselect:0
 run android/install.sh
 run "$(mytv)restore-my-tv.sh"
-check "with no other services, accessibility goes back off" "[ \"\$(setting enabled_accessibility_services)\" = null ] && [ \"\$(setting accessibility_enabled)\" = 0 ]"
+check "with no other services, accessibility goes back exactly as it was (unset)" "[ \"\$(setting enabled_accessibility_services)\" = null ] && [ \"\$(setting accessibility_enabled)\" = null ]"
 
 # debloat/restore.sh on its own.
 tv sony3 "$SONY" com.sony.dtv.sonyselect:0 tv.samba.ssm:1
@@ -112,9 +142,17 @@ run debloat/debloat.sh --list; check "Fire TV is detected" "says 'Amazon Fire TV
 # A wildcard never-rule protects an app with no entry of its own, but not one listed as optional.
 tv hisense "ro.product.brand=Hisense ro.product.manufacturer=Hisense ro.product.model=55A6" com.mediatek.unknownservice:0 com.mediatek.androidbox:0
 run debloat/debloat.sh com.mediatek.unknownservice
-check "a pattern-protected app is refused" "[ \"\$(state com.mediatek.unknownservice)\" = 0 ]"
+check "a pattern-protected app is refused as protected" "says 'keep or never' && [ \"\$(state com.mediatek.unknownservice)\" = 0 ]"
 run debloat/debloat.sh --include all
 check "an explicitly optional app under the pattern can be hidden" "[ \"\$(state com.mediatek.androidbox)\" = 3 ] && [ \"\$(state com.mediatek.unknownservice)\" = 0 ]"
+
+# A brand's never-pattern beats a common.txt entry; Fire TV Edition sets get the Fire TV list.
+tv patternbrand "ro.product.brand=Acme ro.product.manufacturer=Acme ro.product.model=X1" com.google.android.feedback:0
+printf 'never     other      com.google.android.feed*                           test pattern\n' > "$WORK/repo/debloat/brands/testbrand.txt"
+run debloat/debloat.sh --brand testbrand
+check "a brand's never-pattern protects a common bloat app" "[ \"\$(state com.google.android.feedback)\" = 0 ]"
+tv firetv "ro.product.brand=Toshiba ro.product.manufacturer=Amazon ro.product.model=AFTDCT31"
+run debloat/debloat.sh --list; check "a Fire TV Edition set gets the Fire TV list" "says 'Amazon Fire TV list'"
 
 # Unknown brand: only the common list; --brand picks a list; an unknown --brand is refused.
 tv acme "ro.product.brand=Acme ro.product.manufacturer=Acme ro.product.model=X1" com.google.android.feedback:0 com.tcl.esticker:0

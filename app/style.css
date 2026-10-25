@@ -638,7 +638,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000}
 @keyframes font-in{from{opacity:0}}
 @media(prefers-reduced-motion:reduce){.is-font-switch .home .ph-name,.is-font-switch .home .clock,.is-font-switch .home .tile .label,.is-font-switch .home .u-label,.is-font-switch .home .app-focus-name,.is-font-switch .home .util-focus-label{animation-duration:120ms}}
 
-/* ---------- Photo appearance: Light or Dark over any photo (Match photo keeps each photo's own inks) ---------- */
+/* ---------- Photo appearance: Light or Dark over any photo (Auto keeps each photo's own inks) ---------- */
 /* Dark: the photo deepened, white text, smoky glass. */
 .stage.pa-dark .bg::after{content:'';position:absolute;left:0;top:0;width:1920px;height:1080px;background:rgba(6,9,12,.34);pointer-events:none}
 .stage.pa-dark .mat-veil,.stage.pa-dark.registered-material .mat-veil{display:block;background:rgba(6,9,12,.42)}

@@ -10,7 +10,9 @@ Sources:
     packages a full review of that TV found must stay.
 
 Rules, most cautious first:
-  - A package marked never or keep anywhere stays never or keep. debloat.sh refuses to touch them.
+  - A package marked never or keep in the research stays never or keep. debloat.sh refuses to touch them.
+  - A Sony package in sony-never.txt stays never, unless CleanYourTV hides it on 5 or more Sony models
+    without trouble; then it is optional at most, never hidden by default.
   - A "bloat" verdict backed by one source or one project only becomes optional: hidden only on request.
   - Wildcards (com.mediatek.*) are kept as never-patterns only.
 Review the output before use: the lists are only as good as the research.
@@ -105,7 +107,7 @@ def research(name):
         if not verdict:
             continue
         note = ''
-        if verdict == 'bloat' and re.search(r'1 (source|project)', cells[3] + ' ' + cells[4]):
+        if verdict == 'bloat' and re.search(r'\b1 (source|project)', cells[3] + ' ' + cells[4]):
             verdict, note = 'optional', ' [one source]'
         for pkg in packages_in(cells[0]):
             if pkg.endswith('*'):
@@ -142,14 +144,15 @@ def sony():
     for pkg, n in counts.items():
         if pkg in ours or n < 5:
             continue
-        verdict = 'bloat' if n >= 15 else 'optional'
+        # The tested Sony's never-list is evidence too: such a package is never hidden by default.
+        verdict = 'bloat' if n >= 15 and pkg not in our_never else 'optional'
         group = ('b2b' if '.b2b.' in pkg else 'voice' if any(w in pkg for w in ('assistant', 'katniss', 'pumpkin'))
                  else 'feature' if any(w in pkg for w in ('dlna', 'airplay', 'homekit', 'seeds', 'sensingcamera', 'gesture', 'distancealert', 'livingfit', 'smartmedia', 'osat', 'wifidirect', 'dreamx', 'backdrop', 'mediashell'))
                  else 'demo' if any(w in pkg for w in ('demo', 'help', 'customersupport', 'imanual', 'tutorial'))
                  else 'telemetry' if any(w in pkg for w in ('bugreport', 'usercontext', 'lastaccess', 'idd', 'feedback')) else 'updater' if 'autoinstalls' in pkg
                  else 'ads' if any(w in pkg for w in ('promo', 'select', 'discovery', 'sonytab')) else 'other')
         desc = comments[pkg].most_common(1)[0][0] if comments[pkg] else ''
-        note = ' [CleanYourTV %d/%d%s]' % (n, total, '; kept as a system service on the tested Sony' if pkg in our_never else '')
+        note = ' [CleanYourTV %d/%d%s]' % (n, total, '; a system service on the tested Sony, so only when chosen' if pkg in our_never else '')
         add('sony', pkg, verdict, group if group != 'b2b' else 'feature', (desc[:90] or 'Disabled on other Sony models') + note)
     for pkg in our_never:
         if counts[pkg] < 5:

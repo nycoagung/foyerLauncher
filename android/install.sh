@@ -66,17 +66,19 @@ case ":$current:" in
   *) tv settings put secure enabled_accessibility_services "'$current:$SERVICE'" ;;
 esac
 tv settings put secure accessibility_enabled 1
+# Straight away, so the TV's restore script can give Home back even if the service is slow to start.
+write_restore
 
 # The system binds the service a moment later.
 for i in 1 2 3 4 5 6 7 8 9 10; do
   if tv dumpsys accessibility | grep -q "$PKG"; then
     echo "  ok Home button service is on"
-    write_restore
     echo "Done. Press Home on the remote to open FoyerLauncher. Hold Home to open the TV's own home screen."
     echo "To undo everything, run the restore script above."
     exit 0
   fi
   sleep 1
 done
-echo "The Home button service did not start. Run ./restore.sh to put the settings back, and check: adb shell dumpsys accessibility"
+echo "The Home button service did not start yet. Some TVs ask you to confirm it in Settings > Accessibility; check there."
+echo "To put the settings back instead, run the restore script above (or ./restore.sh). To check: adb shell dumpsys accessibility"
 exit 1

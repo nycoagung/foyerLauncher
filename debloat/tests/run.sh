@@ -4,7 +4,7 @@
 set -u
 cd "$(dirname "$0")/../.."
 ROOT=$PWD
-WORK=$ROOT/debloat/tests/.work
+WORK=$ROOT/.local/debloat-tests   # outside debloat/, which each test copies
 rm -rf "$WORK"; mkdir -p "$WORK"
 trap 'rm -rf "$WORK"' EXIT
 export PATH="$ROOT/debloat/tests/fake-adb:$PATH" TV_SERIAL=fake-tv

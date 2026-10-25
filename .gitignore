@@ -36,7 +36,6 @@ PP*.woff2
 
 # Each TV's records and its own restore script (debloat/ and android/ write them): that TV's owner only.
 /my-tvs/
-/debloat/tests/.work/
 
 # Android shell: build output, the signing key and per-TV settings baselines.
 /android/out/

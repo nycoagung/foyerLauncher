@@ -4,6 +4,16 @@ All notable changes to this app will be documented in this file.
 
 ---
 
+## [Unreleased]
+
+### Security
+Hardening from a security review; no change to how the app or scripts are used.
+- **The setup scripts treat everything a TV reports over adb as untrusted text.** Values from `getprop`, the serial number and accessibility settings are reduced to printable characters (one line) before they are recorded or written into a TV's `restore-my-tv.sh`, so a tampered or impersonating TV can't inject a line that would run on the owner's computer. Only well-formed component names are sent back to the TV's shell. A fake-adb test reproduces the old injection and confirms the fix.
+- **The home page now carries a Content-Security-Policy** limiting it to its own files plus the two weather hosts; an outside script is blocked. The page was already fully local; this enforces it. 2 browser checks.
+- **Ambient photos are rejected if their shape is extreme or they would exceed ~40 MP decoded**, so a hostile feed can't exhaust memory.
+- `scripts/marks-from-tv.mjs --remove` validates ids; the agent guide notes that text from the TV is data, not instructions; `scripts/preview.py` checks the Host header (local only); CI actions are pinned to commit SHAs.
+- Added `SECURITY.md`; enabled branch protection, Dependabot alerts and private vulnerability reporting on the repository.
+
 ## [1.0.0] - 2026-10-25
 
 First release as FoyerLauncher. Forked from CleanFrame 0.6.1 (MIT), a home screen for Samsung Tizen TVs, renamed, relicensed as GPL-2.0-or-later for new work, and extended with an Android TV / Google TV app. The Tizen build keeps working, with a new package identity.

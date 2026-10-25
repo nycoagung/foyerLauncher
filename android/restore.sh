@@ -19,12 +19,12 @@ BASELINE=$DIR/accessibility-before.txt
 LEGACY=.local/accessibility-before-$(printf %s "$TV" | tr -c "A-Za-z0-9." _).txt
 [ -f "$BASELINE" ] || [ ! -f "$LEGACY" ] || mv "$LEGACY" "$BASELINE"
 
-saved() { if [ -f "$BASELINE" ]; then sed -n "s/^$1=//p" "$BASELINE"; fi; }
+saved() { if [ -f "$BASELINE" ]; then sed -n "s/^$1=//p" "$BASELINE" | head -n1 | tr -cd 'A-Za-z0-9_.$/:'; fi; }
 # put <name> <value>: "null" means the TV had no value, so delete it again. Values are single-quoted for
 # the TV's shell, which adb shell hands its arguments to.
 put() { if [ -z "$2" ] || [ "$2" = null ]; then tv settings delete secure "$1" >/dev/null; else tv settings put secure "$1" "'$2'"; fi; }
 
-current=$(tv settings get secure enabled_accessibility_services)
+current=$(accessibility_services)
 others=$(printf '%s' "$current" | tr ':' '\n' | grep -v "^$PKG/" | grep -v '^null$' | paste -sd: - || true)
 if [ -n "$others" ]; then
   tv settings put secure enabled_accessibility_services "'$others'"

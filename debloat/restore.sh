@@ -36,7 +36,7 @@ BEFORE=$DIR/enabled-before.txt
 
 # Restorable: what this TV's record says debloat.sh hid, with the group and description from the lists.
 candidates=$(mktemp "${TMPDIR:-/tmp}/restore.XXXXXX")
-trap 'rm -f "$LIST" "$SOURCES" "$candidates"' EXIT
+trap 'rm -rf "$WORKDIR" "$candidates"' EXIT
 records() { cat "$BEFORE" 2>/dev/null || true; }
 records | awk -v list="$LIST" '
   BEGIN { while ((getline line < list) > 0) { split(line, f, " "); d = line; sub(/^[^ ]+ +[^ ]+ +[^ ]+ */, "", d); group[f[3]] = f[2]; desc[f[3]] = d } }

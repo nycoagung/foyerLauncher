@@ -15,6 +15,11 @@ class PreviewServer(ThreadingHTTPServer):
 
 class Preview(SimpleHTTPRequestHandler):
     def send_head(self):
+        # Only requests addressed to this computer: a web page can't reach the preview by pointing a DNS name here.
+        host = (self.headers.get('Host') or '').rsplit(':', 1)[0].strip('[]')
+        if host not in ('127.0.0.1', 'localhost', '::1'):
+            self.send_error(403, 'Preview is local only')
+            return None
         route = unquote(urlsplit(self.path).path)
         if route in ['/home/assets/font-catalog.js', '/home/assets/private-fonts.css'] or route.startswith('/home/assets/private-fonts/'):
             source = font_overlay(include_private=self.server.include_private_fonts).get(route[len('/home/'):])

@@ -48,8 +48,8 @@ fi
 if [ ! -f "$BASELINE" ]; then
   # Without FoyerLauncher's own service, in case it was already turned on (in the TV's settings, or from
   # another computer); with it gone, accessibility was off.
-  services=$(tv settings get secure enabled_accessibility_services)
-  enabled=$(tv settings get secure accessibility_enabled)
+  services=$(accessibility_services)
+  enabled=$(accessibility_enabled)
   case ":$services:" in *":$PKG/"*)
     services=$(printf '%s' "$services" | tr ':' '\n' | grep -v "^$PKG/" | paste -sd: - || true)
     [ -n "$services" ] || { services=null; enabled=0; } ;;
@@ -59,7 +59,7 @@ if [ ! -f "$BASELINE" ]; then
 fi
 
 # adb shell re-parses its arguments on the TV, so values go in single quotes there (a $ in a component stays literal).
-current=$(tv settings get secure enabled_accessibility_services)
+current=$(accessibility_services)
 case ":$current:" in
   *":$SERVICE:"*) ;;
   ":null:"|"::") tv settings put secure enabled_accessibility_services "'$SERVICE'" ;;

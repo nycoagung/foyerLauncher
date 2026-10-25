@@ -109,6 +109,12 @@ echo "android_id=other" > "$FAKE_TV/settings"
 run "$(mytv)restore-my-tv.sh"
 check "and the restore script tells such TVs apart" "says 'not the one this script was written for'"
 
+# A TV reporting a hostile model name can't put a command into the restore script.
+tv hostile "$SONY" com.sony.dtv.sonyselect:0
+(cd "$WORK/repo" && FAKE_MODEL_RAW="BRAVIA\nname=touch $WORK/pwned #" debloat/debloat.sh) > "$WORK/out" 2>&1
+(cd "$WORK/repo" && FAKE_MODEL_RAW="BRAVIA\nname=touch $WORK/pwned #" "$(mytv)restore-my-tv.sh") > "$WORK/out" 2>&1
+check "a TV's reported values can't inject commands into the restore script" "[ ! -e \"$WORK/pwned\" ] && [ \"\$(grep -c '^name=' \"\$(mytv)tv.txt\")\" = 1 ] && ! grep -q '^touch\\|; touch\\|^name=touch' \"\$(mytv)restore-my-tv.sh\""
+
 # A TV whose accessibility was off: the restore puts it back off.
 tv sony2 "$SONY" com.sony.dtv.sonyselect:0
 run android/install.sh

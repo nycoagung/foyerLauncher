@@ -30,6 +30,7 @@ const save = () => { mkdirSync(root + '.local', { recursive: true }); writeFileS
 
 if (REMOVE) {
   for (const id of REMOVE.split(',').map(s => s.trim()).filter(Boolean)) {
+    if (!/^[a-z0-9-]+$/.test(id)) { console.log('Not a mark id: ' + id); continue; }
     const before = MARKS.length;
     MARKS = MARKS.filter(m => m.id !== id);
     rmSync(out + id + '.svg', { force: true });

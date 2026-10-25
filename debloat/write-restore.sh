@@ -6,23 +6,25 @@
 set -eo pipefail
 DIR=${1:?usage: $0 <tv folder in my-tvs/>}; DIR=${DIR%/}
 [ -f "$DIR/tv.txt" ] || { echo "$DIR has no tv.txt"; exit 1; }
-get() { sed -n "s/^$1=//p" "$DIR/tv.txt"; }
+# One line of printable text per value: a TV's reported name must never become a line of the script.
+get() { sed -n "s/^$1=//p" "$DIR/tv.txt" | head -n1 | tr -cd '[:print:]'; }
 quote() { printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"; }
 
 name=$(get name) serial=$(get serial) address=$(get address)
-packages=$(cat "$DIR/enabled-before.txt" 2>/dev/null || true)
-launcher=$(cat "$DIR/launcher.txt" 2>/dev/null || true)
+# Only well-formed package names and states, and only an accessibility setting made of component names.
+packages=$(awk '$1 ~ /^[A-Za-z0-9_.]+$/ && $2 ~ /^[0-9]$/ { print $1, $2 }' "$DIR/enabled-before.txt" 2>/dev/null || true)
+launcher=$(head -n1 "$DIR/launcher.txt" 2>/dev/null | tr -cd 'A-Za-z0-9_.' || true)
 services="" enabled=""
 if [ -f "$DIR/accessibility-before.txt" ]; then
-  services=$(sed -n 's/^enabled_accessibility_services=//p' "$DIR/accessibility-before.txt")
-  enabled=$(sed -n 's/^accessibility_enabled=//p' "$DIR/accessibility-before.txt")
+  services=$(sed -n 's/^enabled_accessibility_services=//p' "$DIR/accessibility-before.txt" | head -n1 | tr -cd 'A-Za-z0-9_.$/:')
+  enabled=$(sed -n 's/^accessibility_enabled=//p' "$DIR/accessibility-before.txt" | head -n1 | tr -cd 'a-z0-9')
 fi
 out="$DIR/restore-my-tv.sh"
 
 {
   cat <<EOF
 #!/usr/bin/env bash
-# Puts the $name back the way it was before FoyerLauncher's setup changed it.
+# Puts the $(printf '%s' "$name" | tr -cd 'A-Za-z0-9 ._()-') back the way it was before FoyerLauncher's setup changed it.
 # Written $(date '+%Y-%m-%d %H:%M') by FoyerLauncher's debloat/write-restore.sh from what was recorded on this TV.
 # It needs only adb (Android platform-tools) and is safe to run more than once.
 #
@@ -85,10 +87,11 @@ state() { tv dumpsys package "$1" | awk '/User 0:.* enabled=[0-9]/ && !d { match
 
 # The Home button first, so it comes back even if an app can't be restored.
 if [ -n "$LAUNCHER" ]; then
-  current=$(tv settings get secure enabled_accessibility_services)
+  current=$(tv settings get secure enabled_accessibility_services | head -n1 | tr -cd 'A-Za-z0-9_.$/:')
   if printf '%s' "$current" | tr ':' '\n' | grep -q "^$LAUNCHER/"; then
     echo "Giving the Home button back to the TV's own home screen."
-    others=$(printf '%s' "$current" | tr ':' '\n' | grep -v "^$LAUNCHER/" | grep -v '^null$' | paste -sd: - || true)
+    # Component names only: adb shell re-parses arguments on the TV, so nothing else is sent back.
+    others=$(printf '%s' "$current" | tr ':' '\n' | grep -v "^$LAUNCHER/" | grep -v '^null$' | grep -E '^[A-Za-z0-9_.$/]+$' | paste -sd: - || true)
     if [ -n "$others" ]; then
       run settings put secure enabled_accessibility_services "'$others'" || fail "couldn't turn off the Home button service"
     else

@@ -51,7 +51,7 @@ if [ $again = 1 ]; then
   echo "Hiding again everything hidden on this TV before ($(wc -l < "$BEFORE" | tr -d ' ') apps)."
 fi
 build_list
-about="$(tv getprop ro.product.manufacturer) $(tv getprop ro.product.model) (Android $(tv getprop ro.build.version.release))"
+about="$(tvtext getprop ro.product.manufacturer) $(tvtext getprop ro.product.model) (Android $(tvtext getprop ro.build.version.release))"
 if [ -n "$BRAND" ]; then
   echo "$about: using the $BRAND_NAME list and the common Android TV list."
 else
@@ -133,7 +133,7 @@ while read -r verdict group pkg desc; do
   if [[ "$result" == *disabled-user* ]]; then
     echo "  ok $pkg ($desc)"; hidden=$((hidden + 1))
   else
-    echo "  !! $pkg: $result"; failed=$((failed + 1))
+    echo "  !! $pkg: $(printf '%s' "$result" | tr -cd '[:print:]')"; failed=$((failed + 1))
   fi
 done < "$LIST"
 

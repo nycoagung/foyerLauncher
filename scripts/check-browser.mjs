@@ -236,6 +236,21 @@ try {
     await look({ bg: 'dark' });
     check('It only applies to the Photo background', !/\bpa-/.test(await cls()));
   });
+  await run('Content Security Policy', async () => {
+    await page({});
+    await current.addInitScript(() => { window.__csp = []; document.addEventListener('securitypolicyviolation', e => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI)); });
+    await current.reload(); await ready();
+    await call('scene', 'settings'); await act('settings.group.about'); await act('about.source');
+    await current.waitForFunction(() => { const img = document.querySelector('.reader-code img'); return img && img.complete && img.naturalWidth > 0; });
+    await call('scene', 'home'); await look({ bg: 'photo', appearance: 'dark' }); await look({ bg: 'photo', appearance: 'auto' });
+    check('The page runs under its policy with nothing blocked', await current.evaluate(() => !!document.querySelector('meta[http-equiv="Content-Security-Policy"]') && window.__csp.length === 0), await current.evaluate(() => window.__csp));
+    current.__expectedFailures.push('https://example.com/x.js');
+    const blocked = await current.evaluate(() => new Promise(done => {
+      const s = document.createElement('script'); s.src = 'https://example.com/x.js';
+      s.onload = () => done(false); s.onerror = () => done(true); document.head.appendChild(s); setTimeout(() => done(true), 3000);
+    }));
+    check('An outside script is blocked', blocked && await current.evaluate(() => window.__csp.some(v => /^script-src/.test(v))), await current.evaluate(() => window.__csp));
+  });
   await run('About on Samsung', async () => {
     await page({});
     await call('scene', 'settings');

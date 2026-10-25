@@ -18,6 +18,8 @@ resolve_tv() {
 }
 
 tv() { adb -s "$TV" shell "$@" </dev/null | tr -d '\r'; }
+# A value the TV reports, as one line of printable text: what a TV says is data, never commands or terminal codes.
+tvtext() { tv "$@" | head -n1 | tr -cd '[:print:]'; }
 
 connect() {
   command -v adb >/dev/null || { echo "adb not found. Install Android platform-tools (on macOS: brew install --cask android-platform-tools)."; exit 1; }
@@ -27,6 +29,14 @@ connect() {
     exit 1
   fi
 }
+
+# accessibility_services: the TV's enabled accessibility services, keeping only well-formed component
+# names (pkg/class), or null. adb shell re-parses what is sent back, so nothing else may reach the TV's shell.
+accessibility_services() {
+  local v; v=$(tvtext settings get secure enabled_accessibility_services | tr ':' '\n' | grep -E '^[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+$' | paste -sd: - || true)
+  printf '%s' "${v:-null}"
+}
+accessibility_enabled() { local v; v=$(tvtext settings get secure accessibility_enabled | tr -cd '0-9'); printf '%s' "${v:-null}"; }
 
 # Enabled state for user 0: 0 default, 1 enabled, 2 disabled (by the maker), 3 disabled by a user.
 user_state() {
@@ -46,9 +56,9 @@ detect_brand() {
   fi
   BRAND="" BRAND_NAME=""
   # Fire OS first: Fire TV Edition sets carry the TV maker's brand, but Amazon's software (models AFT...).
-  case "$(tv getprop ro.product.model)" in AFT*) BRAND=amazon; BRAND_NAME=$(brand_name amazon); return ;; esac
+  case "$(tvtext getprop ro.product.model)" in AFT*) BRAND=amazon; BRAND_NAME=$(brand_name amazon); return ;; esac
   for prop in ro.product.brand ro.product.manufacturer ro.product.model ro.product.device; do
-    value=$(tv getprop "$prop")
+    value=$(tvtext getprop "$prop")
     [ -n "$value" ] || continue
     id=$(awk -v v="$value" '!/^#/ && NF >= 2 { if (tolower(v) ~ tolower($2)) { print $1; exit } }' "$DEBLOAT/brands/brands.txt")
     if [ -n "$id" ]; then BRAND=$id; BRAND_NAME=$(brand_name "$id"); return; fi
@@ -59,7 +69,8 @@ detect_brand() {
 # the brand's list. Where both name a package, the more cautious verdict wins (bloat < optional < keep < never).
 # SOURCES says which list each line came from (0 common, 1 brand), for never-patterns.
 build_list() {
-  LIST=$(mktemp "${TMPDIR:-/tmp}/debloat.XXXXXX"); SOURCES="$LIST.src"
+  # Both files in a private folder of their own, so no other user can predict or replace them.
+  WORKDIR=$(mktemp -d "${TMPDIR:-/tmp}/debloat.XXXXXX"); LIST=$WORKDIR/list; SOURCES=$WORKDIR/sources
   local files=("$DEBLOAT/brands/common.txt")
   [ -n "$BRAND" ] && [ "$BRAND" != common ] && files+=("$DEBLOAT/brands/$BRAND.txt")
   awk -v ranks="$RANKS" -v common="${files[0]}" -v sources="$SOURCES" '
@@ -72,7 +83,7 @@ build_list() {
     }
     END { for (i = 1; i <= count; i++) { print best[names[i]]; print names[i], from[names[i]] > sources } }
   ' "${files[@]}" > "$LIST"
-  trap 'rm -f "$LIST" "$SOURCES"' EXIT
+  trap 'rm -rf "$WORKDIR"' EXIT
 }
 
 # protected <package>: true when the merged list says keep or never for it, or a never-pattern covers it
@@ -90,9 +101,9 @@ protected() {
 # Android ID. It keys my-tvs/ and lets the restore script refuse a different TV.
 tv_identity() {
   local serial
-  serial=$(tv getprop ro.serialno)
+  serial=$(tvtext getprop ro.serialno)
   case "$(printf '%s' "$serial" | tr 'a-z' 'A-Z')" in
-    ''|UNKNOWN|0123456789ABCDEF|1234567890ABCDEF|0000000000000000|0123456789) printf 'aid-%s' "$(tv settings get secure android_id)" ;;
+    ''|UNKNOWN|0123456789ABCDEF|1234567890ABCDEF|0000000000000000|0123456789) printf 'aid-%s' "$(tvtext settings get secure android_id)" ;;
     *) printf '%s' "$serial" ;;
   esac
 }
@@ -101,8 +112,8 @@ tv_identity() {
 # keeps its tv.txt up to date. It holds what the scripts record and the TV's own restore script.
 tv_dir() {
   local manufacturer model serial key first
-  manufacturer=$(tv getprop ro.product.manufacturer)
-  model=$(tv getprop ro.product.model)
+  manufacturer=$(tvtext getprop ro.product.manufacturer)
+  model=$(tvtext getprop ro.product.model)
   serial=$(tv_identity)
   key="$(printf '%s' "${model:-tv}" | tr -c 'A-Za-z0-9._-' _ | sed 's/_*$//')${serial:+-$(printf '%s' "$serial" | tr -c 'A-Za-z0-9._-' _)}"
   DIR="$REPO/my-tvs/$key"
@@ -111,7 +122,7 @@ tv_dir() {
   {
     echo "name=$manufacturer $model"
     echo "brand=${BRAND:-$(sed -n 's/^brand=//p' "$DIR/tv.txt" 2>/dev/null || true)}"
-    echo "android=$(tv getprop ro.build.version.release)"
+    echo "android=$(tvtext getprop ro.build.version.release)"
     echo "serial=$serial"
     echo "address=$TV"
     echo "first_seen=${first:-$(date '+%Y-%m-%d %H:%M')}"

@@ -3,6 +3,7 @@
 #   props     key=value lines (ro.product.brand=TCL ...)
 #   packages  "<package> <state>" lines; state 0 default, 1 enabled, 2 maker-disabled, 3 user-disabled
 #   settings  key=value lines for `settings ... secure` (missing means null)
+# FAKE_MODEL_RAW replaces ro.product.model with a value that may hold escapes such as \n (a hostile TV).
 # FAKE_FAIL_PKG makes pm enable/default-state fail for that package; FAKE_NO_A11Y=1 keeps services from binding.
 set -e
 [ "$1" = -s ] && shift 2
@@ -21,7 +22,7 @@ case "$1" in
   *) echo "fake adb: unsupported $*" >&2; exit 1 ;;
 esac
 case "$1 $2" in
-  "getprop "*) awk -F= -v k="$2" '$1 == k { print substr($0, index($0, "=") + 1) }' "$FAKE_TV/props" ;;
+  "getprop "*) if [ "$2" = ro.product.model ] && [ -n "${FAKE_MODEL_RAW:-}" ]; then printf '%b\n' "$FAKE_MODEL_RAW"; exit 0; fi; awk -F= -v k="$2" '$1 == k { print substr($0, index($0, "=") + 1) }' "$FAKE_TV/props" ;;
   "pm list")
     if [ "${4:-}" = -d ]; then awk '$2 == 2 || $2 == 3 { print "package:" $1 }' "$P"
     else awk '{ print "package:" $1 }' "$P"; fi ;;

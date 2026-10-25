@@ -180,9 +180,13 @@ final class AmbientPhotos {
         o.inJustDecodeBounds = true;
         BitmapFactory.decodeByteArray(bytes, 0, bytes.length, o);
         if (o.outWidth <= 0 || o.outHeight <= 0) throw new IOException("Not an image");
+        // A photo, not a strip: an extreme shape would decode at full size whatever the sampling.
+        if (o.outWidth > 8 * o.outHeight || o.outHeight > 8 * o.outWidth) throw new IOException("Not a photo");
         o.inJustDecodeBounds = false;
         o.inSampleSize = 1;
         while (o.outWidth / (o.inSampleSize * 2) >= W && o.outHeight / (o.inSampleSize * 2) >= H) o.inSampleSize *= 2;
+        // Never more than about 40 megapixels in memory, however the sides compare.
+        while ((long) (o.outWidth / o.inSampleSize) * (o.outHeight / o.inSampleSize) > 40_000_000L) o.inSampleSize *= 2;
         Bitmap b = BitmapFactory.decodeByteArray(bytes, 0, bytes.length, o);
         if (b == null) throw new IOException("Not an image");
         return b;

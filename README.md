@@ -33,6 +33,7 @@ On **Samsung Tizen TVs** it runs as a signed Tizen web app, as it did in [CleanF
 - **Inputs (Android TV):** switch HDMI and other inputs from Home.
 - **Typography:** Manrope, Geist, Roboto or Newsreader, with Small, Medium or Large app names.
 - **Focus styles and materials:** glass or type focus; soft, frost or clear-tint glass.
+- **Light and dark over photos:** Settings → Focus → Photo appearance. Auto lets text and glass adapt to each photo; Light lays a pale veil with dark text and white glass; Dark deepens the photo with white text and smoky glass. Plain Light and Dark backgrounds are in Background.
 - **Back and Hold Home** always lead to the TV's own home screen and settings.
 - **About:** Settings → About shows the version, What's New and the privacy policy, and links to support the project, the developer's website and the source code, each as a QR code to scan with your phone.
 - **Private by design:** no accounts, analytics, ads or tracking. Settings stay on the TV. See [PRIVACY.md](PRIVACY.md).
@@ -88,8 +89,9 @@ Installing on a TV **needs an AI coding agent** that can run commands on your co
 1. It asks for your TV's **brand, model, platform, software version and IP address**, and shows you where to find each one. You can type them or send a photo of the settings screen.
 2. It walks you through **turning on Developer options and debugging on the TV**: in Settings → System → About, select *Android TV OS build* seven times to unlock Developer options, then turn on *USB debugging* (or *Wireless debugging*) there. Menu names vary by brand; on Fire TV it's Settings → My Fire TV → Developer options → *ADB debugging*. When it connects, the TV asks *Allow USB debugging?*: choose *Always allow from this computer*. The agent then checks it's the TV you described.
 3. It shows you **the apps you could hide**, grouped, with what each one does, recommends which to hide and tells you what you'd lose with the rest. You choose, see exactly what will happen, and approve it.
-4. It hides your choices, installs FoyerLauncher, and checks with you that the remote, inputs, picture, Wi-Fi and the Home button all work.
-5. It hands you **your TV's restore script**, `my-tvs/<model>-<serial>/restore-my-tv.sh`, and shows you what it would undo.
+4. It hides your choices, then makes **logos in FoyerLauncher's style for the apps on your TV** that don't have one, from each app's own icon, and shows you a preview to approve.
+5. It installs FoyerLauncher and checks with you that the remote, inputs, picture, Wi-Fi and the Home button all work.
+6. It hands you **your TV's restore script**, `my-tvs/<model>-<serial>/restore-my-tv.sh`, and shows you what it would undo.
 
 Your TV's details stay on your computer, in the `my-tvs/` folder, which is never part of the project's files. The agent asks before each step that changes the TV.
 
@@ -149,9 +151,9 @@ npm run check:public                        # nothing private is about to be pub
 
 None of the checks contact a TV.
 
-### Optional: logos for your own apps
+### Logos for your own apps
 
-Apps without a published logo show their own icon. To make matching monochrome logos from the apps on your TV, list them in `.local/marks-from-tv.json` and run `scripts/marks-from-tv.mjs` (instructions at the top of the script). They go into the ignored `app/assets/icons/local/`, your own Android build includes them, and they are never published.
+Setup makes white marks in FoyerLauncher's style for the apps on your TV that have no bundled logo (`node scripts/marks-from-tv.mjs --auto`), from each app's own icon, and you approve them from a preview. Apps whose icon can't become a clean shape keep their own icon. The marks are your TV's only: they go into the ignored `app/assets/icons/local/`, only your own Android build includes them, and they are never published.
 
 ---
 

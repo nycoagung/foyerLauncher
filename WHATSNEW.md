@@ -10,6 +10,7 @@
 - **Weather under the clock** (Android TV), in °C or °F. Turn it off in Settings → Weather if you'd rather not.
 - **Switch inputs** like HDMI straight from Home (Android TV).
 - **Google's ambient photos** (Android TV), if you like: choose Google ambient in Settings → Background → Photos for a fresh photograph every time it changes.
+- **Light or dark over your photo.** Settings → Focus → Photo appearance: keep it automatic, or choose a light look with dark text or a dark look with white text, on any photo.
 - **Make it yours:** a 12-hour clock with AM/PM, photos that change as often as every minute, larger or smaller app names, and Roboto as a new font.
 - **Clear out the clutter.** On Android TV, Google TV and Fire TV from 12 brands, hide the ads, trackers, demos and apps you never use. You pick from a list for your TV; nothing is deleted.
 - **Undo with one command.** You get a restore script made for your TV that brings everything back.

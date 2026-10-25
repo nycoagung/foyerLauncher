@@ -1,6 +1,6 @@
 # TV Setup Guide for AI Agents
 
-This guide is for an AI coding agent (for example Claude Code) setting up someone's TV with FoyerLauncher, working with the TV's owner. Installation is done this way: the agent reads this repository, asks the owner for their TV's details, offers them a list of preinstalled apps to hide, installs FoyerLauncher, and leaves them a restore script made for their TV.
+This guide is for an AI coding agent (for example Claude Code) setting up someone's TV with FoyerLauncher, working with the TV's owner. Installation is done this way: the agent reads this repository, asks the owner for their TV's details, offers them a list of preinstalled apps to hide, gives the TV's apps matching logos, installs FoyerLauncher, and leaves them a restore script made for their TV.
 
 It covers **Android TV and Google TV sets and boxes of any brand**. The debloat step has lists for Sony, TCL, Hisense, Xiaomi, Philips, Sharp, Panasonic, Toshiba, Nvidia Shield, Chromecast with Google TV / Google TV Streamer, Walmart onn. and Amazon Fire TV, and a common list for every other Android TV. FoyerLauncher itself needs Android TV OS 8.0 or later; Amazon Fire TV doesn't let another app take the Home button, so there only the debloat step applies. For a **Samsung** TV (Tizen), use the [Samsung guide](agent-tv-setup-guide.md) instead; it has no debloat step. **LG** (webOS), **Roku**, **Hisense VIDAA** and **Fire TV Vega OS** sticks can't be set up with this repository: tell the owner and stop.
 
@@ -44,7 +44,7 @@ Check for, and with the owner's agreement install:
 - **Node.js 22+ and Python 3.10+**, then `npm ci` in the repository.
 - **To build FoyerLauncher:** Android SDK platform 34 and build-tools 35.0.0, and a JDK 17+. Android Studio's bundled SDK and JDK are found automatically on macOS; elsewhere set `ANDROID_HOME` and `JAVA_HOME`.
 
-Build with `npm run build:android`. The first build makes a signing key in ignored `android/.local/`. Tell the owner to keep that folder: updates must be signed with the same key.
+Build with `npm run build:android` (stage 7 rebuilds it with the TV's app marks). The first build makes a signing key in ignored `android/.local/`. Tell the owner to keep that folder: updates must be signed with the same key.
 
 **Done when:** `android/out/foyerlauncher.apk` exists and `adb version` works. (Skip the build on Fire TV.)
 
@@ -104,7 +104,21 @@ Then ask the owner to check, with the remote: the remote's buttons and voice sea
 
 **Done when:** the owner has confirmed the TV works as before, without the hidden apps.
 
-## Stage 7 Install FoyerLauncher
+## Stage 7 Give the TV's apps matching logos
+
+FoyerLauncher shows apps it has a logo for as a white mark in its own style; other apps show their usual colourful icon. This stage makes matching marks for the apps on this TV that have none, from each app's own icon: its monochrome layer (the one Android uses for themed icons) when there is one, otherwise its adaptive-icon foreground, or a logo the app ships. Skip it on Fire TV.
+
+Run `TV_IP=<TV_IP> node scripts/marks-from-tv.mjs --auto`. It only reads from the TV (it copies each app's package to the computer). It lists what it made and skipped (apps whose icon is a solid square keep their own), and draws `.local/marks-preview.png`. Show the owner that sheet and ask whether any mark looks wrong or they'd rather keep an app's own icon; drop those with `node scripts/marks-from-tv.mjs --remove <id>,<id>`. Then run `node scripts/build-icon-metrics.mjs` and `npm run build:android`, so the next stage installs them.
+
+The marks are this TV's only: they stay in ignored `app/assets/icons/local/` and `.local/`, and are never published.
+
+**Agent prompt**
+
+> Make logos in FoyerLauncher's style for the apps on my TV that don't have one, show me the preview, and let me drop any I don't like.
+
+**Done when:** the owner has approved the marks and the app has been rebuilt with them.
+
+## Stage 8 Install FoyerLauncher
 
 Skip this on Fire TV. Ask the owner which they want:
 
@@ -123,7 +137,7 @@ If Home still opens the TV's own home screen, check `adb shell dumpsys accessibi
 
 **Done when:** the owner has seen each check work, or knows which one didn't.
 
-## Stage 8 Hand over the restore script
+## Stage 9 Hand over the restore script
 
 The scripts have written `my-tvs/<model>-<serial>/restore-my-tv.sh`, made for this TV. It brings back every hidden app to its earlier state, gives the Home button back to the TV's own home screen, and with `--uninstall` removes FoyerLauncher. It needs only adb, and refuses to run against a different TV.
 

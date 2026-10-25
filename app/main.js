@@ -51,12 +51,12 @@
     newsreader: { name: 'Newsreader', family: 'Study Newsreader', display: 400, ui: 400, clock: 400 }
   };
   var PRIVATE_FONTS = window.FoyerPrivateFontIDs || [], fontMetrics = {}, unavailableFonts = {}, widthCache = {}, fontsReady = false;
-  var LOOK_KEYS = ['bg', 'layout', 'apps', 'font', 'controls', 'focus', 'material', 'size', 'weather', 'units', 'photos'];
+  var LOOK_KEYS = ['bg', 'layout', 'apps', 'font', 'controls', 'focus', 'material', 'size', 'weather', 'units', 'photos', 'appearance'];
   var LOOK_VALUES = { bg: ['dark', 'light', 'photo'], layout: ['list', 'dock'], apps: ['icons', 'both', 'text'], font: Object.keys(FONTS).filter(function (id) { return id === 'manrope' || PRIVATE_FONTS.indexOf(id) >= 0; }), controls: ['icons', 'both', 'text'], focus: ['type', 'glass'], material: ['soft', 'frost', 'tint'],
-    size: ['small', 'medium', 'large'], weather: ['on', 'off'], units: ['c', 'f'], photos: ['builtin', 'google'] };
-  var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material', size: 'Text size', weather: 'Weather', units: 'Temperature', photos: 'Photos' };
+    size: ['small', 'medium', 'large'], weather: ['on', 'off'], units: ['c', 'f'], photos: ['builtin', 'google'], appearance: ['auto', 'light', 'dark'] };
+  var LOOK_NAMES = { bg: 'Background', layout: 'Layout', apps: 'Apps', font: 'Font', controls: 'Home controls', focus: 'Focus', material: 'Material', size: 'Text size', weather: 'Weather', units: 'Temperature', photos: 'Photos', appearance: 'Photo appearance' };
   var VALUE_NAMES = { dark: 'Dark', light: 'Light', photo: 'Photo', list: 'List', dock: 'Dock', type: 'Type', glass: 'Glass', soft: 'Soft', frost: 'Frost', tint: 'Clear tint', icons: 'Icons', both: 'Icons and text', text: 'Text',
-    small: 'Small', medium: 'Medium', large: 'Large', on: 'On', off: 'Off', c: '°C', f: '°F', builtin: 'FoyerLauncher', google: 'Google ambient' };
+    small: 'Small', medium: 'Medium', large: 'Large', on: 'On', off: 'Off', c: '°C', f: '°F', builtin: 'FoyerLauncher', google: 'Google ambient', auto: 'Auto' };
   // App names in List and Dock scale around their own centre; Medium is the original design.
   var TEXT_SCALE = { small: .85, medium: 1, large: 1.15 };
   var UTIL = { art: [LABELS.art || 'Art Mode', LABELS.artIcon || 'art'], apps: ['All apps', 'apps'], arrange: ['Arrange', 'arrange'], settings: ['Settings', 'settings'] };
@@ -108,7 +108,7 @@
     for (var i = 0; i < list.length; i++) if (list[i].toLowerCase() === v) return list[i];
     return fallback;
   }
-  function lookOf(c) { return { bg: c.bg, wall: c.wall, layout: c.layout, apps: c.apps, font: c.font, controls: c.controls, focus: c.focus, material: c.material, size: c.size, weather: c.weather, units: c.units, photos: c.photos }; }
+  function lookOf(c) { return { bg: c.bg, wall: c.wall, layout: c.layout, apps: c.apps, font: c.font, controls: c.controls, focus: c.focus, material: c.material, size: c.size, weather: c.weather, units: c.units, photos: c.photos, appearance: c.appearance }; }
   function materialApplies(c) { c = c || S.c; return c.bg === 'photo' && (c.layout === 'dock' || c.focus === 'glass'); }
   function derivedTheme() { return S.c.layout === 'list' ? 'list' : 'shore'; }
 
@@ -385,7 +385,7 @@
       apps: pick(modern.apps, LOOK_VALUES.apps, legacyList ? 'text' : 'both'), controls: pick(modern.controls, LOOK_VALUES.controls, 'both'),
       focus: pick(modern.focus, LOOK_VALUES.focus, legacyList ? 'type' : 'glass'), material: pick(modern.material, LOOK_VALUES.material, 'soft'),
       font: pick(modern.font, LOOK_VALUES.font, 'manrope'), wall: wall(modern.wall || s.wallpaper) ? modern.wall || s.wallpaper : WALLS[0].id,
-      size: pick(modern.size, LOOK_VALUES.size, 'medium'), weather: pick(modern.weather, LOOK_VALUES.weather, 'on'), units: pick(modern.units, LOOK_VALUES.units, 'c'), photos: pick(modern.photos, LOOK_VALUES.photos, 'builtin'),
+      size: pick(modern.size, LOOK_VALUES.size, 'medium'), weather: pick(modern.weather, LOOK_VALUES.weather, 'on'), units: pick(modern.units, LOOK_VALUES.units, 'c'), photos: pick(modern.photos, LOOK_VALUES.photos, 'builtin'), appearance: pick(modern.appearance, LOOK_VALUES.appearance, 'auto'),
       home: h, recent: recent, lastApp: h.indexOf(s.lastApp) >= 0 ? s.lastApp : h[0],
       mode: pick(s.mode, MODES.map(function (m) { return m.id; }), 'fixed')
     };
@@ -885,7 +885,7 @@
     return [{ id: 'background', label: 'Background', value: S.c.bg === 'photo' ? wall(S.c.wall).name : VALUE_NAMES[S.c.bg] },
       { id: 'layout', label: 'Layout', value: VALUE_NAMES[S.c.layout] },
       { id: 'typography', label: 'Typography', value: FONTS[S.c.font].name + (S.c.size !== 'medium' ? ', ' + VALUE_NAMES[S.c.size].toLowerCase() + ' names' : '') },
-      { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') }]
+      { id: 'focus', label: 'Focus', value: VALUE_NAMES[S.c.focus] + (materialApplies() ? ', ' + VALUE_NAMES[S.c.material] : '') + (S.c.bg === 'photo' && S.c.appearance !== 'auto' ? ', ' + VALUE_NAMES[S.c.appearance].toLowerCase() : '') }]
       .concat(DEVICE.weather ? [{ id: 'weather', label: 'Weather', value: S.c.weather === 'off' ? 'Off' : (weather.data && weather.data.place ? weather.data.place + ', ' : '') + VALUE_NAMES[S.c.units] }] : [])
       .concat([{ id: 'editor', label: 'Apps on Home', value: n + (n === 1 ? ' app' : ' apps') },
       { id: 'samsung', label: LABELS.platform || 'Samsung', value: LABELS.platformValue || 'Home and TV settings' }])
@@ -937,7 +937,9 @@
     if (t.group === 'focus') return [
       { id: 'focus', title: 'Focus style', horizontal: true, items: options('focus', ['type', 'glass']) },
       { id: 'material', title: 'Material', horizontal: true, items: options('material', ['soft', 'frost', 'tint'], inactive),
-        reason: inactive ? flat ? 'Materials are available with a Photo background.' : 'Choose Glass focus or the Dock layout to use materials.' : '' }
+        reason: inactive ? flat ? 'Materials are available with a Photo background.' : 'Choose Glass focus or the Dock layout to use materials.' : '' },
+      { id: 'appearance', title: 'Photo appearance', horizontal: true, items: options('appearance', ['auto', 'light', 'dark'], flat),
+        reason: flat ? 'Appearance applies to the Photo background.' : S.c.appearance === 'light' ? 'A pale veil over the photo, with dark text and white glass.' : S.c.appearance === 'dark' ? 'The photo deepened, with white text and smoky glass.' : 'Auto: text and glass adapt to each photo.' }
     ];
     if (t.group === 'rotation') return [{ id: 'mode', title: '', items: options('mode', MODES.map(function (m) { return m.id; }), flat),
       reason: flat ? 'Choose Photo in Background to use rotation.' : 'Timed changes pause while Settings or another panel is open.' }];
@@ -1122,11 +1124,14 @@
   }
   function render() {
     var t = top(), sheet = !!V[t.id].sheet, shown = wall(S.shown ? S.shown.wall : S.c.wall), palette = ADAPTIVE_INK[shown.id];
-    var adaptive = applyAdaptiveInk(palette), tr = adaptive && palette.tr ? palette.tr.pol : shown.ut.tr, br = adaptive && palette.br ? palette.br.pol : shown.ut.br;
-    stage.className = 'stage bg-' + S.c.bg + ' l-' + S.c.layout + ' v-' + S.variant + ' m-' + (materialApplies() ? S.c.material : 'none') + ' f-' + S.c.focus + ' a-' + S.c.apps + ' u-' + S.c.controls + ' g-' + S.geom + ' tone-' + shown.tone + ' tr-' + tr + ' br-' + br + wallClasses(shown) + inkRungClasses(palette, adaptive) + ' at-' + t.id + ' font-' + homeFont() + (homeFont() !== 'manrope' ? ' font-custom' : '') + (S.fontSwitch ? ' is-font-switch' : '') + (adaptive ? ' has-adaptive-ink adaptive-tl-' + palette.tl.pol : '') + (!adaptive && shown.clockInk ? ' has-clock-ink' : '') + (!adaptive && shown.dockClockInk ? ' has-dock-clock-ink' : '') + (registeredMaterial(shown.id) ? ' registered-material' : '') + (sheet ? ' is-sheet' : '') + (S.reflow ? ' is-reflow' : '');
-    if (!adaptive && shown.clockInk) stage.style.setProperty('--clock-ink', shown.clockInk);
+    // Photo appearance Light or Dark sets one ink for the whole stage instead of each photo's own.
+    var pa = S.c.bg === 'photo' && S.c.appearance !== 'auto' ? S.c.appearance : '', fixed = pa ? (pa === 'dark' ? 'mist' : 'dark') : '';
+    var adaptive = applyAdaptiveInk(pa ? null : palette), tr = fixed || (adaptive && palette.tr ? palette.tr.pol : shown.ut.tr), br = fixed || (adaptive && palette.br ? palette.br.pol : shown.ut.br);
+    var tone = pa ? (pa === 'dark' ? 'light' : 'dark') : shown.tone, clockInk = !adaptive && !pa && shown.clockInk, dockClockInk = !adaptive && !pa && shown.dockClockInk;
+    stage.className = 'stage bg-' + S.c.bg + ' l-' + S.c.layout + ' v-' + S.variant + ' m-' + (materialApplies() ? S.c.material : 'none') + ' f-' + S.c.focus + ' a-' + S.c.apps + ' u-' + S.c.controls + ' g-' + S.geom + ' tone-' + tone + (pa ? ' pa-' + pa : '') + ' tr-' + tr + ' br-' + br + wallClasses(shown) + inkRungClasses(palette, adaptive) + ' at-' + t.id + ' font-' + homeFont() + (homeFont() !== 'manrope' ? ' font-custom' : '') + (S.fontSwitch ? ' is-font-switch' : '') + (adaptive ? ' has-adaptive-ink adaptive-tl-' + palette.tl.pol : '') + (clockInk ? ' has-clock-ink' : '') + (dockClockInk ? ' has-dock-clock-ink' : '') + (registeredMaterial(shown.id) ? ' registered-material' : '') + (sheet ? ' is-sheet' : '') + (S.reflow ? ' is-reflow' : '');
+    if (clockInk) stage.style.setProperty('--clock-ink', shown.clockInk);
     else stage.style.removeProperty('--clock-ink');
-    if (!adaptive && shown.dockClockInk) stage.style.setProperty('--dock-clock-ink', shown.dockClockInk);
+    if (dockClockInk) stage.style.setProperty('--dock-clock-ink', shown.dockClockInk);
     else stage.style.removeProperty('--dock-clock-ink');
     applyHomeFont();
     if (!sheet) renderHome(t);

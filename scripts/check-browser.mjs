@@ -214,6 +214,28 @@ try {
     await current.reload(); await ready();
     check('Migrated preferences survive reload', (await state()).look.controls === 'text' && (await state()).dock[0] === 'netflix');
   });
+  await run('Photo appearance', async () => {
+    await page({});
+    const cls = () => current.evaluate(() => document.getElementById('stage').className);
+    const ink = sel => current.evaluate(s => getComputedStyle(document.querySelector(s)).color, sel);
+    check('Auto is the default and keeps each photo\'s own inks', (await state()).look.appearance === 'auto' && !/\bpa-/.test(await cls()));
+    await look({ bg: 'photo', layout: 'dock', appearance: 'dark' });
+    check('Dark sets light text over a deepened photo', /\bpa-dark\b/.test(await cls()) && /\btr-mist\b/.test(await cls()) && !/has-adaptive-ink/.test(await cls()));
+    await look({ appearance: 'light' });
+    const light = await cls();
+    check('Light sets dark text over a pale veil', /\bpa-light\b/.test(light) && /\btr-dark\b/.test(light) && /\bbr-dark\b/.test(light));
+    check('Light Home text is dark', await ink('#home') === 'rgb(29, 26, 22)', await ink('#home'));
+    await call('scene', 'settings'); await act('settings.group.focus');
+    check('Settings keep their own light text in Light', await ink('#appearanceTitle') !== 'rgb(29, 26, 22)', await ink('#appearanceTitle'));
+    const focusActions = await call('actions');
+    check('Focus offers Auto, Light and Dark', ['choice.appearance.auto', 'choice.appearance.light', 'choice.appearance.dark'].every(a => focusActions.includes(a)));
+    await act('choice.appearance.dark'); await ready();
+    check('Choosing in Settings applies and saves it', (await stored()).look.appearance === 'dark' && /\bpa-dark\b/.test(await cls()));
+    await current.reload(); await ready();
+    check('It survives a restart', (await state()).look.appearance === 'dark');
+    await look({ bg: 'dark' });
+    check('It only applies to the Photo background', !/\bpa-/.test(await cls()));
+  });
   await run('About on Samsung', async () => {
     await page({});
     await call('scene', 'settings');

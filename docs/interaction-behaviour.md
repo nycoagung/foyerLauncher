@@ -12,17 +12,18 @@
 
 ## Settings and appearance
 
-Settings opens a grouped overview: Background, Layout, Typography, Focus, Weather (Android only), Apps on Home and Samsung (Google TV on Android). OK opens a group. Appearance groups use a two-pane screen with visible choices on the left and the committed Home preview on the right.
+Settings opens a grouped overview: Background, Layout, Typography, Focus, Weather (Android only), Apps on Home, Samsung (Google TV on Android) and About. OK opens a group. Appearance groups use a two-pane screen with visible choices on the left and the committed Home preview on the right.
 
 | Group | Choices |
 | --- | --- |
 | Background | Photo, Light, Dark; Wallpaper and Rotation when Photo is active. On Android, Wallpaper → Photos chooses FoyerLauncher's photographs or Google ambient |
 | Layout | List or Dock; independent Text, Icons or Both choices for apps and Home controls |
 | Typography | Manrope, Neue Montreal, Mori, Pangram Sans, Geist, Roboto and Newsreader, when available; App name size Small, Medium or Large |
-| Focus | Type or Glass; Soft, Frost or Clear tint material |
+| Focus | Type or Glass; Soft, Frost or Clear tint material; Photo appearance Auto, Light or Dark (inactive without a Photo background) |
 | Weather | On or Off; °C or °F. Android only; units are inactive while weather is off |
 | Apps on Home | Membership and arrangement editor |
 | Samsung | Samsung Home and TV settings |
+| About | Version and What's New, Privacy Policy, and links shown as QR codes |
 
 Up/Down moves between rows. Left/Right moves between choices in a horizontal row. Focus alone changes neither the preview nor saved preferences in these appearance groups. Wallpaper has its own temporary photo preview, described below. OK applies the focused value. A checkmark identifies the applied value; the filled plate identifies remote focus. Applying the current value does not write again.
 
@@ -62,6 +63,8 @@ This mode comes from [research on Samsung's Art app](https://github.com/TheFab21
 Samsung Home explicitly launches the original `com.samsung.tv.csfs` app, independently of the new Home assignment. The earlier `com.samsung.tv.coba.newhome` component did not open Smart Hub visibly and is no longer the escape target. TV settings still uses `com.samsung.tv.coba.setting`. Exact on-device destinations are recorded in docs/tv-status.md; launch callbacks alone are not visual proof. There is no blind power-key fallback.
 
 All calls have bounded response handling. A failure leaves FoyerLauncher usable. No simulated device success views remain. Browser validation cannot confirm the visible Samsung destination.
+
+Photo appearance Auto keeps each photo's measured text inks. Light lays a pale veil over the photo with dark text and white glass, and in List a pale column behind the names; Dark deepens the photo with white text and smoky glass. Both replace the photo's own inks with one set for the whole Home, and leave the Settings panels as they are.
 
 ## Preferences and wallpaper
 
